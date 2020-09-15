@@ -8,9 +8,9 @@ import numpy as np
 
 import sys
 sys.path.append('..')
-from core.module import Module
-from core.pre_module import Pre_Module
-from core.layer import Linear2
+#from core.module import Module
+#from core.pre_module import Pre_Module
+#from core.layer import Linear2
 
 class RBM(torch.nn.Module):
     def __init__(self, w, b, unit_type, cnt, **kwargs):
@@ -89,7 +89,7 @@ class RBM(torch.nn.Module):
     
     def batch_training(self, epoch):
         if epoch == 1:
-            print('\nTraining '+self.name+ ' in {}'.format(self.dvc) + self.dvc_info +':')
+            print('\n Training '+self.name+ ' in {}'.format(self.dvc) + self.dvc_info +':')
         self = self.to(self.dvc)
         self.eval()
         
@@ -104,7 +104,7 @@ class RBM(torch.nn.Module):
                             epoch, batch_idx + 1, len(self.train_loader), l1_w, l1_b, l1_a)
                     sys.stdout.write('\r'+ msg_str)
                     sys.stdout.flush()
-        
+'''      
 class DBN(Module, Pre_Module):  
     def __init__(self, **kwargs):
         if 'name' in kwargs.keys(): 
@@ -148,3 +148,4 @@ class DBN(Module, Pre_Module):
         
         rbm = RBM(w, b, [v_type, h_type], cnt, **self.kwargs)
         return rbm
+'''
