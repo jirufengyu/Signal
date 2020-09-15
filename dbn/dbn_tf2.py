@@ -53,7 +53,7 @@ class RBM(object):
             for epoch in range(epochs):
                 for start,end in zip(range(0,len(X),batchsize),range(batchsize,len(X),batchsize)):
                     batch=X[start:end]
-                    cur_w=sess.run(update_w,feed_dict={v0:batch,_w:prv_w,_hb:prv_hb,_vb:prv_vb})
+                    cur_w  = sess.run(update_w,  feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
                     cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
                     cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
                     prv_w=cur_w
