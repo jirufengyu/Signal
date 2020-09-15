@@ -21,7 +21,7 @@ class RBM(object):
         return tf.math.sigmoid(tf.linalg.matmul(hidden, tf.transpose(w)) + vb)
     def sample_prob(self,probs):
         return tf.nn.relu(tf.sign(probs-tf.random.uniform(tf.shape(probs))))
-    def train(self,X,epochs=5,batchsize=128):
+    def train(self,X,epochs=2,batchsize=128):
         _w=tf1.placeholder("float",[self._input_size,self._output_size])
         _hb=tf1.placeholder("float",[self._output_size])
         _vb=tf1.placeholder("float",[self._input_size])
@@ -67,20 +67,22 @@ class RBM(object):
             self.vb=prv_vb
     
     def rbm_outpt(self, X):
-        input_X = tf.constant(X)
+        input_X = tf.constant(X,dtype=tf.float32)
         _w = tf.constant(self.w)
         _hb = tf.constant(self.hb)
         out = tf.math.sigmoid(tf.linalg.matmul(input_X, _w) + _hb)
         with tf1.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+            sess.run(tf1.global_variables_initializer())
             return sess.run(out)
 
 
 mnist = keras.datasets.mnist
 
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
-rbm=RBM(784,50)
-print(train_images.shape)
-train_images.reshape(-1,784)
+rbm=RBM(784,500)
+print(train_images[0])
+train_images=train_images.reshape(-1,784)
+train_images=train_images/255.0
+print("new:",train_images[0])
 rbm.train(train_images)
 print(rbm.rbm_outpt(train_images[:10]))
