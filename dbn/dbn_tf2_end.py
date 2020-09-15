@@ -20,19 +20,9 @@ class RBM(object):
     def sample_prob(self,probs):
         return tf.nn.relu(tf.sign(probs-tf.random.uniform(tf.shape(probs))))
     
-    def runG(self,batch,_w,_hb,_vb,i):
+    def runG(self,batch,_w,_hb,_vb):
         v0=tf.cast(batch,tf.float32)
-        '''
-        if(i==1):
-            print(v0.shape)
-            print(_w.shape)
-            print(_hb.shape)
-            print(_vb.shape)
-        else:
-            print(_w.shape)
-            print(_hb.shape)
-            print(_vb.shape)
-            '''
+        
         h0=self.sample_prob(self.prob_h_given_v(v0,_w,_hb))
         v1=self.sample_prob(self.prob_v_given_h(h0,_w,_vb))
         h1=self.prob_h_given_v(v1,_w,_hb)
@@ -46,7 +36,7 @@ class RBM(object):
 
         loss=tf.reduce_mean(tf.square(v0-v1))
         return update_w,update_hb,update_vb,loss
-    def train(self,X,epochs=5,batchsize=128):
+    def train(self,X,epochs=5,batchsize=100):
         prv_w=np.zeros([self._input_size,self._output_size],np.float32)
         prv_hb=np.zeros([self._output_size],np.float32)
         prv_vb=np.zeros([self._input_size],np.float32)
@@ -58,12 +48,12 @@ class RBM(object):
             for start,end in zip(range(0,len(X),batchsize),range(batchsize,len(X),batchsize)):
                 batch=X[start:end]
                 
-                cur_w,cur_hb,cur_vb,_=self.runG(batch,prv_w,prv_hb,prv_vb,0)
+                cur_w,cur_hb,cur_vb,_=self.runG(batch,prv_w,prv_hb,prv_vb)
                 
                 prv_w=cur_w
                 prv_hb=cur_hb
                 prv_vb=cur_vb
-            _a,_b,_c,loss=self.runG(X,cur_w,cur_hb,cur_vb,1)        
+            _a,_b,_c,loss=self.runG(X,cur_w,cur_hb,cur_vb)        
             print('Epoch: %d' % epoch, 'loss: %f' % loss)
 
         self.w=prv_w
@@ -83,9 +73,9 @@ class RBM(object):
 mnist = keras.datasets.mnist
 
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
-rbm=RBM(784,500)
+#rbm=RBM(784,500)
 
-train_images=train_images.reshape(-1,784)
-train_images=train_images/255.0
+#train_images=train_images.reshape(-1,784)
+#train_images=train_images/255.0
 
-rbm.train(train_images)
+#rbm.train(train_images)
