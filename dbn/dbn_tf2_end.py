@@ -44,8 +44,8 @@ class RBM(object):
         update_vb=_vb+self.learning_rate*tf.reduce_mean(v0-v1,0)
         update_hb=_hb+self.learning_rate*tf.reduce_mean(h0-h1,0)
 
-        err=tf.reduce_mean(tf.square(v0-v1))
-        return update_w,update_hb,update_vb,err
+        loss=tf.reduce_mean(tf.square(v0-v1))
+        return update_w,update_hb,update_vb,loss
     def train(self,X,epochs=5,batchsize=128):
         prv_w=np.zeros([self._input_size,self._output_size],np.float32)
         prv_hb=np.zeros([self._output_size],np.float32)
@@ -63,8 +63,8 @@ class RBM(object):
                 prv_w=cur_w
                 prv_hb=cur_hb
                 prv_vb=cur_vb
-            _a,_b,_c,error=self.runG(X,cur_w,cur_hb,cur_vb,1)        
-            print('Epoch: %d' % epoch, 'reconstruction error: %f' % error)
+            _a,_b,_c,loss=self.runG(X,cur_w,cur_hb,cur_vb,1)        
+            print('Epoch: %d' % epoch, 'loss: %f' % loss)
 
         self.w=prv_w
         self.hb=prv_hb
