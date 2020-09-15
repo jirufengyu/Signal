@@ -13,7 +13,7 @@ import jieba
 #import tensorflow.keras as keras
 max_features=10000
 maxlen=300
-dt=pd.read_csv("sgnewfull.csv",sep='\t',skiprows=1,names=['title','content'])
+dt=pd.read_csv("sgnewfull.csv",sep='\t',skiprows=1,names=['title','content'],nrows=10000)
 #按行读取文件，返回文件的行字符串列表,读取stopwords.dat
 def read_file(file_name):
     fp = open(file_name, "r", encoding="utf-8")
