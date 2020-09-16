@@ -1,7 +1,9 @@
+
 import tensorflow as tf
 import numpy as np
 import tensorflow.compat.v1 as tf1
 import tensorflow.keras as keras
+import math
 tf1.disable_eager_execution()
 class RBM(object):
     def __init__(self,input_size,output_size,learning_rate=1.0):
@@ -81,10 +83,35 @@ class RBM(object):
 mnist = keras.datasets.mnist
 
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
-rbm=RBM(784,500)
-print(train_images[0])
+#rbm=RBM(784,500)
+#print(train_images[0])
 train_images=train_images.reshape(-1,784)
 train_images=train_images/255.0
-print("new:",train_images[0])
-rbm.train(train_images)
-print(rbm.rbm_outpt(train_images[:10]))
+#print("new:",train_images[0])
+#rbm.train(train_images)
+#print(rbm.rbm_outpt(train_images[:10]))
+
+'''训练每一个RBM'''
+RBM_hidden_sizes = [500, 200 , 50 ] #create 4 layers of RBM with size 785-500-200-50
+
+#Since we are training, set input as training data
+inpX = train_images
+
+#Create list to hold our RBMs
+rbm_list = []
+
+#Size of inputs is the number of inputs in the training set
+input_size = inpX.shape[1]
+
+#For each RBM we want to generate
+for i, size in enumerate(RBM_hidden_sizes):
+    print('RBM: ',i,' ',input_size,'->', size)
+    rbm_list.append(RBM(input_size, size))
+    input_size = size
+#For each RBM in our list
+for rbm in rbm_list:
+    print('New RBM:')
+    #Train a new one
+    rbm.train(inpX) 
+    #Return the output layer
+    inpX = rbm.rbm_outpt(inpX)
