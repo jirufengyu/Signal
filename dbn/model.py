@@ -1,3 +1,4 @@
+#%%
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Dense, Reshape, Flatten, Dropout, Concatenate
 from tensorflow.keras.layers import BatchNormalization, Activation, ZeroPadding2D
@@ -278,16 +279,7 @@ class GanModel(tf.keras.Model):
 
         return Model(img, validity)
 
-
-
-
-
-
-
-
-
-
-
+'''
 #input=tf.random.normal([30,500], mean=0.0, stddev=1.0)
 g=GAN()
 img=plt.imread("img.png").astype(np.float)
@@ -297,6 +289,28 @@ input=tf.random.uniform([50,300],minval=1,maxval=2)
 txt,out1=g.T_Encoder(input)
 p=g.C_Deconder(img,txt,32)
 k=g.T_Deconder(txt)
+'''
+# %%
+class AEModel(tf.keras.Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.img_rows = 128
+        self.img_cols = 128
+        self.channels = 3
+        self.img_shape = (self.img_rows, self.img_cols, self.channels)
 
-
-
+        self.dense1=Dense(14)
+        
+        self.dense4=Dense(28)
+    def call(self,input):
+        x=self.dense1(input)
+    
+        x=self.dense4(input)
+        return Model(input,x)
+data=tf.keras.datasets.mnist()
+(data,y),(_,_)=data.load_data()
+model=AEModel()
+model.compile(optimizer=tf.keras.optimizers.Adam,loss=tf.keras.losses.categorical_crossentropy)
+model.fit(data,data)
+out=model.evaluate(data[0])
+    
