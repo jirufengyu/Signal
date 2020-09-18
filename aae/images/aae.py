@@ -38,13 +38,14 @@ class AdversarialAutoencoder():
         # from the encoding
         encoded_repr = self.encoder(img)
         reconstructed_img = self.decoder(encoded_repr)
-
-        # For the adversarial_autoencoder model we will only train the generator
+        # For the adversarial_autoencoder model we will only train the generator  
         self.discriminator.trainable = False
-
+        if(Model_mode==1):
         # The discriminator determines validity of the encoding
-        validity = self.discriminator(encoded_repr)
-
+            validity = self.discriminator(encoded_repr)
+        else:
+            reconstructed_img= Flatten()(reconstructed_img)
+            validity=self.discriminator(reconstructed_img,input_shape=)
         # The adversarial_autoencoder model  (stacked generator and discriminator)
         self.adversarial_autoencoder = Model(img, [reconstructed_img, validity])
         self.adversarial_autoencoder.compile(loss=['mse', 'binary_crossentropy'],
@@ -88,18 +89,17 @@ class AdversarialAutoencoder():
 
         return Model(z, img)
 
-    def build_discriminator(self):
+    def build_discriminator(self,input_shape=self.latent_dim):
 
         model = Sequential()
 
-        model.add(Dense(512, input_dim=self.latent_dim))
+        model.add(Dense(512, input_dim=input_shape))
         model.add(LeakyReLU(alpha=0.2))
         model.add(Dense(256))
         model.add(LeakyReLU(alpha=0.2))
         model.add(Dense(1, activation="sigmoid"))
         model.summary()
-
-        encoded_repr = Input(shape=(self.latent_dim, ))
+        encoded_repr = Input(shape=(input_shape, ))
         validity = model(encoded_repr)
 
         return Model(encoded_repr, validity)
@@ -214,6 +214,6 @@ class AdversarialAutoencoder_END2END():
 
         return keras.Model(z,img)
     
-    def discriminator(self):
+    #def discriminator(self):
         
 
