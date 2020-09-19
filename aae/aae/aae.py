@@ -24,11 +24,7 @@ class AdversarialAutoencoder():
 
         optimizer = Adam(0.0002, 0.5)
         self.Model_mode=Model
-        # Build and compile the discriminator
-        self.discriminator = self.build_discriminator()
-        self.discriminator.compile(loss='binary_crossentropy',
-            optimizer=optimizer,
-            metrics=['accuracy'])
+        
 
         # Build the encoder / decoder
         self.encoder = self.build_encoder()
@@ -40,13 +36,25 @@ class AdversarialAutoencoder():
         encoded_repr = self.encoder(img)
         reconstructed_img = self.decoder(encoded_repr)
         # For the adversarial_autoencoder model we will only train the generator  
-        self.discriminator.trainable = False
+        
         if(self.Model_mode==1):                 #!使用潜在编码对抗
+            self.discriminator = self.build_discriminator(input_shape=self.latent_dim)
+            self.discriminator.compile(loss='binary_crossentropy',
+                                        # Build and compile the discriminator
+                                        optimizer=optimizer,
+                                        metrics=['accuracy'])
+            self.discriminator.trainable = False
         # The discriminator determines validity of the encoding
             validity = self.discriminator(encoded_repr)
         else:                                   #!使用生成图片对抗
+            self.discriminator = self.build_discriminator(input_shape=np.prod(self.img_shape))
+            self.discriminator.compile(loss='binary_crossentropy',
+                                        # Build and compile the discriminator
+                                        optimizer=optimizer,
+                                        metrics=['accuracy'])
+            self.discriminator.trainable = False
             reconstructed_img= Flatten()(reconstructed_img)
-            validity=self.discriminator(reconstructed_img,input_shape=np.prod(self.img_shape))
+            validity=self.discriminator(reconstructed_img)
         # The adversarial_autoencoder model  (stacked generator and discriminator)
         self.adversarial_autoencoder = Model(img, [reconstructed_img, validity])
         self.adversarial_autoencoder.compile(loss=['mse', 'binary_crossentropy'],
@@ -90,7 +98,7 @@ class AdversarialAutoencoder():
 
         return Model(z, img)
 
-    def build_discriminator(self,input_shape=self.latent_dim):
+    def build_discriminator(self,input_shape):
 
         model = Sequential()
 
@@ -133,18 +141,19 @@ class AdversarialAutoencoder():
             else:
                 letent=self.encoder.predict(imgs)
                 img_fake=self.decoder.predict(letent)
-                img_real=imgs
+                img_real=Flatten()(imgs)
+                
+                img_fake=Flatten()(imgs)
+
             # Train the discriminator
             d_loss_real = self.discriminator.train_on_batch(img_real, valid)
             d_loss_fake = self.discriminator.train_on_batch(img_fake, fake)
             d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-
             # ---------------------
             #  Train Generator
             # ---------------------
-
             # Train the generator
-            g_loss = self.adversarial_autoencoder.train_on_batch(imgs, [imgs, valid])
+            g_loss = self.adversarial_autoencoder.train_on_batch(imgs, [img_fake, valid])
 
             # Plot the progress
             print ("%d [D loss: %f, acc: %.2f%%] [G loss: %f, mse: %f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[0], g_loss[1]))
@@ -185,7 +194,7 @@ class AdversarialAutoencoder():
         save(self.generator, "aae_generator")
         save(self.discriminator, "aae_discriminator")
 if __name__ == '__main__':
-    aae = AdversarialAutoencoder(Model_mode=0)
+    aae = AdversarialAutoencoder(Model_mode=1)
     with tf.device("/gpu:0"):
         aae.train(epochs=2000, batch_size=32, sample_interval=99)
 class AdversarialAutoencoder_END2END():

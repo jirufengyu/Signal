@@ -9,7 +9,7 @@ from tensorflow.keras.layers import UpSampling2D, Conv2D
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import losses
-from tensorlfow.keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
 import numpy as np
