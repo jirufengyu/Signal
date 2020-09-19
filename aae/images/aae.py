@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import tensorflow.keras.backend as K
 import numpy as np
 class AdversarialAutoencoder():
-    def __init__(self,Model_mode=1):
+    def __init__(self):
         self.img_rows = 28
         self.img_cols = 28
         self.channels = 1
@@ -40,12 +40,7 @@ class AdversarialAutoencoder():
         reconstructed_img = self.decoder(encoded_repr)
         # For the adversarial_autoencoder model we will only train the generator  
         self.discriminator.trainable = False
-        if(Model_mode==1):
-        # The discriminator determines validity of the encoding
-            validity = self.discriminator(encoded_repr)
-        else:
-            reconstructed_img= Flatten()(reconstructed_img)
-            validity=self.discriminator(reconstructed_img,input_shape=)
+        validity = self.discriminator(encoded_repr)
         # The adversarial_autoencoder model  (stacked generator and discriminator)
         self.adversarial_autoencoder = Model(img, [reconstructed_img, validity])
         self.adversarial_autoencoder.compile(loss=['mse', 'binary_crossentropy'],
@@ -89,17 +84,18 @@ class AdversarialAutoencoder():
 
         return Model(z, img)
 
-    def build_discriminator(self,input_shape=self.latent_dim):
+    def build_discriminator(self):
 
         model = Sequential()
 
-        model.add(Dense(512, input_dim=input_shape))
+        model.add(Dense(512, input_dim=self.latent_dim))
         model.add(LeakyReLU(alpha=0.2))
         model.add(Dense(256))
         model.add(LeakyReLU(alpha=0.2))
         model.add(Dense(1, activation="sigmoid"))
         model.summary()
-        encoded_repr = Input(shape=(input_shape, ))
+
+        encoded_repr = Input(shape=(self.latent_dim, ))
         validity = model(encoded_repr)
 
         return Model(encoded_repr, validity)
@@ -164,7 +160,7 @@ class AdversarialAutoencoder():
                 axs[i,j].imshow(gen_imgs[cnt, :,:,0], cmap='gray')
                 axs[i,j].axis('off')
                 cnt += 1
-        fig.savefig("images/mnist_%d.png" % epoch)
+        fig.savefig("mnist_%d.png" % epoch)
         plt.close()
 
     def save_model(self):
