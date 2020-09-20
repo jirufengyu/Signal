@@ -1,6 +1,6 @@
 from utils.Dataset import Dataset
 from model import model
-from utils.print_result import print_result
+#from utils.print_result import print_result
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -36,4 +36,4 @@ if __name__ == '__main__':
     epochs = [epochs_pre, epochs_total, epochs_h]
 
     H, gt = model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
-    print_result(n_clusters, H, gt)
+    #print_result(n_clusters, H, gt)

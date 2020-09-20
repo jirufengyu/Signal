@@ -58,7 +58,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
     g1 = net_dg1.get_g(h_input)
     g2 = net_dg2.get_g(h_input)
-
+    
     gpu_options = tf.GPUOptions(allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     sess.run(tf.global_variables_initializer())
@@ -70,7 +70,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             _, val_pre = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2})
             err_pre.append(val_pre)
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
-                                                                                                     val_pre)
+                                                                                                    val_pre)
             print(output)
 
     # the whole training process(ADM)
@@ -90,7 +90,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 
             # ADM-step1: optimize inner AEs and
             _, val_ae = sess.run([update_ae, loss_ae], feed_dict={x1_input: batch_x1, x2_input: batch_x2,
-                                                                  fea1_latent: batch_g1, fea2_latent: batch_g2})
+                                                                fea1_latent: batch_g1, fea2_latent: batch_g2})
 
             # get inter - layer features(i.e., z_half)
             batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
@@ -98,14 +98,16 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 
             sess.run(tf.assign(h_input, batch_h))
             # ADM-step2: optimize dg nets
+            
             _, val_dg = sess.run([update_dg, loss_dg], feed_dict={fea1_latent: batch_z_half1,
-                                                                  fea2_latent: batch_z_half2})
+                                                                fea2_latent: batch_z_half2})
 
             # ADM-step3: update H
             for k in range(epochs[2]):
                 sess.run(update_h, feed_dict={fea1_latent: batch_z_half1, fea2_latent: batch_z_half2})
 
             batch_h_new = sess.run(h_input)
+            print("h_input2:",h_input)
             H[start_idx: end_idx, ...] = batch_h_new
 
             # get latest feature_g for next iteration
@@ -114,11 +116,11 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
 
             val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
-                                                     fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
+                                                    fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
             err_total.append(val_total)
             output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
-                                                                                                  (num_batch_i + 1),
-                                                                                                  val_total)
+                                                                                                (num_batch_i + 1),
+                                                                                                val_total)
             print(output)
 
     elapsed = (timeit.default_timer() - start)
@@ -132,5 +134,5 @@ def xavier_init(fan_in, fan_out, constant=1):
     low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
     high = constant * np.sqrt(6.0 / (fan_in + fan_out))
     return tf.random_uniform((fan_in, fan_out),
-                             minval=low, maxval=high,
-                             dtype=tf.float32)
+                            minval=low, maxval=high,
+                            dtype=tf.float32)
