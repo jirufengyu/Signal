@@ -22,8 +22,8 @@ class AdversarialAutoencoder():
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         self.latent_dim = 10
 
-        optimizer = Adam(0.0002, 0.5)
-        self.Model_mode=Model
+        optimizer = Adam(0.001, 0.5)
+        self.Model_mode=Model_mode
         
 
         # Build the encoder / decoder
@@ -194,7 +194,7 @@ class AdversarialAutoencoder():
         save(self.generator, "aae_generator")
         save(self.discriminator, "aae_discriminator")
 if __name__ == '__main__':
-    aae = AdversarialAutoencoder(Model_mode=1)
+    aae = AdversarialAutoencoder(Model_mode=0)
     with tf.device("/gpu:0"):
         aae.train(epochs=2000, batch_size=32, sample_interval=99)
 class AdversarialAutoencoder_END2END():

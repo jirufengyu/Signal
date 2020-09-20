@@ -21,7 +21,7 @@ class AdversarialAutoencoder():
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
         self.latent_dim = 10
 
-        optimizer = Adam(0.0002, 0.5)
+        optimizer = Adam(0.001, 0.5)
 
         # Build and compile the discriminator
         self.discriminator = self.build_discriminator()
@@ -178,7 +178,7 @@ class AdversarialAutoencoder():
         save(self.discriminator, "aae_discriminator")
 if __name__ == '__main__':
     aae = AdversarialAutoencoder()
-    aae.train(epochs=20000, batch_size=32, sample_interval=200)
+    aae.train(epochs=2000, batch_size=32, sample_interval=200)
 class AdversarialAutoencoder_END2END():
     def __init__(self):
         super().__init__()

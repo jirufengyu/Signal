@@ -14,7 +14,7 @@ class RBM(object):
     def prob_h_given_v(self, visible, w, hb):
         # Sigmoid
         return tf.math.sigmoid(tf.linalg.matmul(visible, w) + hb)
-     # Fits the result from the weighted hidden layer plus the bias into a sigmoid curve
+    # Fits the result from the weighted hidden layer plus the bias into a sigmoid curve
     def prob_v_given_h(self, hidden, w, vb):
         return tf.math.sigmoid(tf.linalg.matmul(hidden, tf.transpose(w)) + vb)
     def sample_prob(self,probs):
@@ -73,9 +73,9 @@ class RBM(object):
 mnist = keras.datasets.mnist
 
 (train_images, train_labels), (test_images, test_labels) = mnist.load_data()
-#rbm=RBM(784,500)
+rbm=RBM(784,500)
 
-#train_images=train_images.reshape(-1,784)
-#train_images=train_images/255.0
+train_images=train_images.reshape(-1,784)
+train_images=train_images/255.0
 
-#rbm.train(train_images)
+rbm.train(train_images)
