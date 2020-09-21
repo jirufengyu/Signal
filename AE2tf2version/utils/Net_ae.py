@@ -1,7 +1,8 @@
 import tensorflow as tf
-from tensorflow.contrib import layers
+from tensorflow.keras import layers
+from tensorflow import keras
 
-
+'''
 class Net_ae(object):
     def __init__(self, v, dims_encoder, para_lambda, activation, reg=None):
         """
@@ -124,3 +125,23 @@ class Net_ae(object):
         loss_recon = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(x, z), 2.0))
         loss_degra = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(z_half, g), 2.0))
         return loss_recon + self.para_lambda * loss_degra
+'''
+class Net_ae(object):
+    def __init__(self, input_dim,h_dim,activation="sigmod"):
+        """
+        Building view-specific autoencoder network
+        :param v:  view number
+        :param dims_encoder: nodes of encoding layers, [input-layer, hidden-layer, ..., middle-layer]
+        :param para_lambda: trade-off factor in objective
+        :param activation: activation function of each layer
+        :param reg: coefficient of weight-decay
+        """
+        self.input_dim=input_dim
+        self.activation=activation
+        self.h_dim=h_dim
+    def encoder(self,x):
+        return layers.Dense(h_dim)(x)
+    def decoder(self,x):
+        return layers.Dense(self.input_dim)(x)
+    
+    
