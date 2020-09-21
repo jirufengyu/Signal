@@ -1,7 +1,7 @@
 from sklearn.cluster import KMeans, spectral_clustering
 from . import metrics
 import numpy as np
-
+from newmetrics import Metrics
 
 def cluster(n_clusters, features, labels, count=10):
     """
@@ -20,10 +20,13 @@ def cluster(n_clusters, features, labels, count=10):
     gt = np.reshape(labels, np.shape(pred))
     if np.min(gt) == 1:
         gt -= 1
+    
     acc_avg, acc_std = get_avg_acc(gt, pred_all, count)
     nmi_avg, nmi_std = get_avg_nmi(gt, pred_all, count)
     ri_avg, ri_std = get_avg_RI(gt, pred_all, count)
     f1_avg, f1_std = get_avg_f1(gt, pred_all, count)
+    meature=[np.zeros(count),np.zeros(count),np.zeros(count),np.zeros(count)]#fsc,acc,NMI,ARI
+    metrics= Metrics()
     return acc_avg, acc_std, nmi_avg, nmi_std, ri_avg, ri_std, f1_avg, f1_std
 
 
