@@ -86,7 +86,7 @@ def contingency_matrix(labels_true, labels_pred, eps=None, sparse=False):
     return contingency
 
 
-from sklearn.utils.fixes import comb
+#from sklearn.utils.fixes import comb
 
 
 def _comb2(n):

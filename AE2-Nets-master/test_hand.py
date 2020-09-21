@@ -1,6 +1,6 @@
 from utils.Dataset import Dataset
 from model import model
-#from utils.print_result import print_result
+from utils.print_result import print_result
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"

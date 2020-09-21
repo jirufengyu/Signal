@@ -1,7 +1,7 @@
 from sklearn.cluster import KMeans, spectral_clustering
 from . import metrics
 import numpy as np
-from newmetrics import getMetrics
+from . import newmetrics
 
 def cluster(n_clusters, features, labels, count=10):
     """
@@ -34,7 +34,7 @@ def getAll(y_true,y_pred,count):
     ari_array=np.zeros(count)
     f1_array = np.zeros(count)
     for i in range(count):
-        f1_array[i],acc_array[i],nmi_array[i],ari_array[i]=getMetrics(y_true,y_pred[i])
+        f1_array[i],acc_array[i],nmi_array[i],ari_array[i]=newmetrics.getMetrics(y_true,y_pred[i])
     acc_avg = acc_array.mean()
     acc_std = acc_array.std()
     nmi_avg = nmi_array.mean()
