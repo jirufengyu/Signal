@@ -107,7 +107,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
                 sess.run(update_h, feed_dict={fea1_latent: batch_z_half1, fea2_latent: batch_z_half2})
 
             batch_h_new = sess.run(h_input)
-            print("h_input2:",h_input)
+            
             H[start_idx: end_idx, ...] = batch_h_new
 
             # get latest feature_g for next iteration
