@@ -1,11 +1,11 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow import keras
-
+from tensorflow.contrib import layers
 '''
 class Net_ae(object):
     def __init__(self, v, dims_encoder, para_lambda, activation, reg=None):
-        """
+        """ 
         Building view-specific autoencoder network
         :param v:  view number
         :param dims_encoder: nodes of encoding layers, [input-layer, hidden-layer, ..., middle-layer]
@@ -127,7 +127,7 @@ class Net_ae(object):
         return loss_recon + self.para_lambda * loss_degra
 '''
 class Net_ae(object):
-    def __init__(self, input_dim,h_dim,activation="sigmod"):
+    def __init__(self, input_dim,h_dim,para_lambda=1,activation="sigmod",):
         """
         Building view-specific autoencoder network
         :param v:  view number
@@ -139,9 +139,21 @@ class Net_ae(object):
         self.input_dim=input_dim
         self.activation=activation
         self.h_dim=h_dim
+        self.para_lambda=para_lambda
     def encoder(self,x):
         return layers.Dense(h_dim)(x)
-    def decoder(self,x):
-        return layers.Dense(self.input_dim)(x)
-    
-    
+    def decoder(self,h):
+        return layers.Dense(self.input_dim)(h)
+    def get_h(self,x):
+        return self.encoder(x)
+    def loss_reconstruct(self,x):
+        h=self.encoder(x)
+        x_recon=self.decoder(h)
+        loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        return loss
+    def loss_total(self,x,g):
+        h=self.encoder(x)
+        x_recon=self.decoder(h)
+        loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
+        return loss_recon+self.para_lambda*loss_degra
