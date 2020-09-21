@@ -1,7 +1,7 @@
 from sklearn.cluster import KMeans, spectral_clustering
 from . import metrics
 import numpy as np
-from newmetrics import Metrics
+from newmetrics import getMetrics
 
 def cluster(n_clusters, features, labels, count=10):
     """
@@ -21,15 +21,29 @@ def cluster(n_clusters, features, labels, count=10):
     if np.min(gt) == 1:
         gt -= 1
     
-    acc_avg, acc_std = get_avg_acc(gt, pred_all, count)
-    nmi_avg, nmi_std = get_avg_nmi(gt, pred_all, count)
-    ri_avg, ri_std = get_avg_RI(gt, pred_all, count)
-    f1_avg, f1_std = get_avg_f1(gt, pred_all, count)
-    meature=[np.zeros(count),np.zeros(count),np.zeros(count),np.zeros(count)]#fsc,acc,NMI,ARI
-    metrics= Metrics()
-    return acc_avg, acc_std, nmi_avg, nmi_std, ri_avg, ri_std, f1_avg, f1_std
+    #acc_avg, acc_std = get_avg_acc(gt, pred_all, count)
+    #nmi_avg, nmi_std = get_avg_nmi(gt, pred_all, count)
+    #ri_avg, ri_std = get_avg_RI(gt, pred_all, count)
+    #f1_avg, f1_std = get_avg_f1(gt, pred_all, count)
+    acc_avg,nmi_avg,ari_avg,f1_avg=getAll(gt,pred_all,count)
+    return acc_avg,nmi_avg,ari_avg,f1_avg
 
-
+def getAll(y_true,y_pred,count):
+    acc_array=np.zeros(count)
+    nmi_array=np.zeros(count)
+    ari_array=np.zeros(count)
+    f1_array = np.zeros(count)
+    for i in range(count):
+        f1_array[i],acc_array[i],nmi_array[i],ari_array[i]=getMetrics(y_true,y_pred[i])
+    acc_avg = acc_array.mean()
+    acc_std = acc_array.std()
+    nmi_avg = nmi_array.mean()
+    nmi_std = nmi_array.std()
+    ari_avg = ari_array.mean()
+    ari_std = ari_array.std()
+    f1_avg = f1_array.mean()
+    f1_std = f1_array.std()
+    return acc_avg,nmi_avg,ari_avg,f1_avg
 def get_avg_acc(y_true, y_pred, count):
     acc_array = np.zeros(count)
     for i in range(count):
@@ -64,17 +78,3 @@ def get_avg_f1(y_true, y_pred, count):
     f1_avg = f1_array.mean()
     f1_std = f1_array.std()
     return f1_avg, f1_std
-
-
-def get_acc(y_true, y_pred):
-    if np.min(y_true) == 1:
-        y_true -= 1
-    acc_array = metrics.acc(y_true, y_pred)
-    return acc_array
-
-
-def get_nmi(y_true, y_pred):
-    if np.min(y_true) == 1:
-        y_true -= 1
-    acc_array = metrics.nmi(y_true, y_pred)
-    return acc_array
