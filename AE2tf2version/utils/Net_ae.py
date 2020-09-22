@@ -1,7 +1,7 @@
 import tensorflow as tf
-#from tensorflow.keras import layers
-#from tensorflow import keras
-from tensorflow.contrib import layers
+from tensorflow.keras import layers
+from tensorflow import keras
+#from tensorflow.contrib import layers
 '''
 class Net_ae(object):
     def __init__(self, v, dims_encoder, para_lambda, activation, reg=None):
