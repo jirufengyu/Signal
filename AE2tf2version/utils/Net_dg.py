@@ -71,11 +71,14 @@ class Net_dg(object):
     def __init__(self,z_dim,activation='sigmod'):
         self.activation=activation
         self.z_dim=z_dim
+        
     def degradation(self,h):
         return layers.Dense(self.z_dim,activation=self.activation)(h)
+
     def loss_degradation(self,h,z):
         g=self.degradation(h)
         loss=keras.losses.MSE(z,g)
         return loss
+
     def get_g(self,h):
         return self.degradation(h)

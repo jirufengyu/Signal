@@ -142,15 +142,19 @@ class Net_ae(object):
         self.para_lambda=para_lambda
     def encoder(self,x):
         return layers.Dense(self.z_dim,activation=self.activation)(x)
+
     def decoder(self,h):
         return layers.Dense(self.input_dim,activation=self.activation)(h)
+        
     def get_z(self,x):
         return self.encoder(x)
+    
     def loss_reconstruct(self,x):
         h=self.encoder(x)
         x_recon=self.decoder(h)
         loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
         return loss
+
     def loss_total(self,x,g):
         h=self.encoder(x)
         x_recon=self.decoder(h)
