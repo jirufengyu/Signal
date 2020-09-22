@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import scipy.io as scio
-from utils.Net_ae import Net_ae
+from utils.Net_ae import Net_ae,Net_Ae
 from utils.Net_dg import Net_dg
 from utils.next_batch import next_batch
 import math
@@ -160,11 +160,12 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     err_pre = list()
     err_total = list()
 
-    net_ae1=Net_ae(input_dim=240,z_dim=200)
-    net_ae2=Net_ae(input_dim=216,z_dim=200)
+    net_ae1=Net_Ae(input_dim=240,z_dim=200)
+    net_ae2=Net_Ae(input_dim=216,z_dim=200)
     net_dg1=Net_dg(z_dim=200)
     net_dg2=Net_dg(z_dim=200)
-
+    net_ae1.build(240)
+    net_ae2.build(216)
     H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
     #x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
     #x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
@@ -199,17 +200,33 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     #sess.run(tf.global_variables_initializer())
 
     # init inner AEs
+    
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
-            loss_pre = net_ae1.loss_reconstruct(batch_x1) + net_ae2.loss_reconstruct(batch_x2)
-            pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
-            print(net_ae1.netpara)
-            pre_train.minimize(loss_pre,var_list=net_ae1.netpara.extend(net_ae2.netpara))
+            #tf.executing_eagerly()
+            
+            #pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
+            temp=[]
+            temp.extend(net_ae1.trainable_variables)
+            temp.extend(net_ae2.trainable_variables)
+            
+            with tf.GradientTape() as tape:
+                loss_pre = net_ae1.loss_reconstruct(batch_x1) + net_ae2.loss_reconstruct(batch_x2)
+                #tape.watch(temp)
+
+            grads = tape.gradient(loss_pre, temp)
+            
+            
+            
+            pre_train.apply_gradients(zip(grads,temp))
+            
+            #pre_train.minimize(loss_pre,var_list=temp)
             #_, val_pre = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2})
             err_pre.append(loss_pre)
+            
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
-                                                                                                    loss_pre)
+                                                                                                    loss_pre[-1])
             print(output)
 
     # the whole training process(ADM)
@@ -229,10 +246,13 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             #batch_g2 = sess.run(g2, feed_dict={h_input: batch_h})
 
             # ADM-step1: optimize inner AEs and
-            loss_ae = net_ae1.loss_total(batch_x1, fea1_latent) + net_ae2.loss_total(batch_x2, fea2_latent)
+            loss_ae = net_ae1.loss_total(batch_x1, batch_g1) + net_ae2.loss_total(batch_x2, batch_g2)
             #_, val_ae = sess.run([update_ae, loss_ae], feed_dict={x1_input: batch_x1, x2_input: batch_x2,
                 #                                                fea1_latent: batch_g1, fea2_latent: batch_g2})
-            update_ae.minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
+            temp=[]
+            temp.extend(net_ae1.netpara)
+            temp.extend(net_ae2.netpara)
+            update_ae.minimize(loss_ae, var_list=temp)
             # get inter - layer features(i.e., z_half)
             batch_z_half1 = net_ae1.get_z(batch_x1)
             batch_z_half2 = net_ae2.get_z(batch_x2)
@@ -244,7 +264,10 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             val_dg=loss_dg = para_lambda * (
                 net_dg1.loss_degradation(h_input, batch_z_half1) + 
                 net_dg2.loss_degradation(h_input, batch_z_half2))
-            update_dg.minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
+            temp=[]
+            temp.extend(net_dg1.netpara)
+            temp.extend(net_dg2.netpara)
+            update_dg.minimize(loss_dg, var_list=temp)
             #_, val_dg = sess.run([update_dg, loss_dg], feed_dict={fea1_latent: batch_z_half1,
                 #                                                fea2_latent: batch_z_half2})
 

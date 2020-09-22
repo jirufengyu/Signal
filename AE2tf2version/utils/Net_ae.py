@@ -164,8 +164,11 @@ class Net_ae(object):
         self.dense2=SimpleDense(self.input_dim)
         self.dense1.build(input_shape=[None,self.input_dim])
         self.dense1.build(input_shape=[None,self.z_dim])
-        self.netpara=self.dense1.weights.extend(self.dense2.weights)
-        print("netpara:",self.netpara)
+        #print("!!!!!!!!!!!!!!!",type(self.dense1.weights))
+        self.netpara=[]
+        self.netpara.extend(self.dense1.variables)
+        self.netpara.extend(self.dense2.variables)
+        #print("!!!!!!!!!!!!!!!netpara:",self.netpara)
         
     
     def encoder(self,x):
@@ -180,13 +183,61 @@ class Net_ae(object):
     def loss_reconstruct(self,x):
         h=self.encoder(x)
         x_recon=self.decoder(h)
-        loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        loss=keras.losses.MSE(x,x_recon)
+        #loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
         return loss
 
     def loss_total(self,x,g):
         h=self.encoder(x)
         x_recon=self.decoder(h)
-        loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
-        loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
+        #loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        #loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
+        loss_recon=0.5*keras.losses.MSE(x,x_recon)
+        loss_degra=0.5*keras.losses.MSE(h,g)
         return loss_recon+self.para_lambda*loss_degra
-       
+
+
+class Net_Ae(keras.layers.Layer):
+    def __init__(self,input_dim,z_dim,para_lambda=1,activation="sigmoid" ):
+        super().__init__()
+        self.input_dim=input_dim
+        self.activation=activation
+        self.z_dim=z_dim
+        self.para_lambda=para_lambda
+        
+    def build(self, input_shape):
+        b_init = tf.zeros_initializer()
+        w_init = tf.random_normal_initializer()
+        self.w1=self.add_weight(initializer=w_init,shape=[input_shape,self.z_dim],dtype=tf.float32,trainable=True)
+        self.b1=self.add_weight(initializer=b_init,shape=self.z_dim,dtype=tf.float32,trainable=True)
+        self.w2=self.add_weight(initializer=w_init,shape=[self.z_dim,input_shape],dtype=tf.float32,trainable=True)
+        self.b2=self.add_weight(initializer=b_init,shape=input_shape,dtype=tf.float32,trainable=True)
+        return super().build(input_shape)
+
+    def encoder(self,x):
+        
+        return tf.math.sigmoid(tf.linalg.matmul(tf.cast(x,dtype=tf.float32), self.w1) + self.b1)
+
+    def decoder(self,h):
+        return tf.math.sigmoid(tf.linalg.matmul(h, self.w2) + self.b2)
+        
+    def get_z(self,x):
+        return self.encoder(x)
+    
+    def loss_reconstruct(self,x):
+        h=self.encoder(x)
+        x_recon=self.decoder(h)
+        loss=keras.losses.MSE(x,x_recon)
+        #loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        return loss
+
+    def loss_total(self,x,g):
+        h=self.encoder(x)
+        x_recon=self.decoder(h)
+        #loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
+        #loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
+        loss_recon=0.5*keras.losses.MSE(x,x_recon)
+        loss_degra=0.5*keras.losses.MSE(h,g)
+        return loss_recon+self.para_lambda*loss_degra
+
+    
