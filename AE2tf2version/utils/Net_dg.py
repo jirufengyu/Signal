@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.contrib import layers
+#from tensorflow.contrib import layers
 from tensorflow.keras import layers
 from tensorflow import keras
 '''
@@ -67,13 +67,35 @@ class Net_dg(object):
     def get_g(self, h):
         return self.degradation(h, self.weights)
 '''
+class SimpleDense(keras.layers.Layer):
+
+  def __init__(self, units=32):
+      super(SimpleDense, self).__init__()
+      self.units = units
+
+  def build(self, input_shape):  # Create the state of the layer (weights)
+    w_init = tf.random_normal_initializer()
+    self.w = tf.Variable(
+        initial_value=w_init(shape=(input_shape[-1], self.units),
+                             dtype='float32'),
+        trainable=True)
+    b_init = tf.zeros_initializer()
+    self.b = tf.Variable(
+        initial_value=b_init(shape=(self.units,), dtype='float32'),
+        trainable=True)
+
+  def call(self, inputs):  # Defines the computation from inputs to outputs
+      return tf.math.sigmoid(tf.linalg.matmul(inputs, self.w) + self.b)
 class Net_dg(object):
-    def __init__(self,z_dim,activation='sigmod'):
+    def __init__(self,z_dim,activation='sigmoid'):
         self.activation=activation
         self.z_dim=z_dim
+        self.dense=SimpleDense(self.z_dim)
+        self.dense.build(input_shape=[None,64])
+        self.netpara=self.dense.weights
         
     def degradation(self,h):
-        return layers.Dense(self.z_dim,activation=self.activation)(h)
+        return self.dense(h)
 
     def loss_degradation(self,h,z):
         g=self.degradation(h)

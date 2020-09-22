@@ -138,7 +138,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 def xavier_init(fan_in, fan_out, constant=1):
     low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
     high = constant * np.sqrt(6.0 / (fan_in + fan_out))
-    return tf.random_uniform((fan_in, fan_out),
+    return keras.backend.random_uniform((fan_in, fan_out),
                             minval=low, maxval=high,
                             dtype=tf.float32)
 
@@ -161,7 +161,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     err_total = list()
 
     net_ae1=Net_ae(input_dim=240,z_dim=200)
-    net_ae2=Net_ae(input_dim=240,z_dim=200)
+    net_ae2=Net_ae(input_dim=216,z_dim=200)
     net_dg1=Net_dg(z_dim=200)
     net_dg2=Net_dg(z_dim=200)
 
@@ -173,8 +173,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     #with tf.variable_scope("H"):
      #   h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
       #  h_list = tf.trainable_variables()
-    fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
-    fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
+   # fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
+   # fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
 
     #loss_pre = net_ae1.loss_reconstruct(x1_input) + net_ae2.loss_reconstruct(x2_input)
     pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
@@ -191,8 +191,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     update_dg = keras.optimizers.Adam(lr[2])#.minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
 
     update_h = keras.optimizers.Adam(lr[3])#.minimize(loss_dg, var_list=h_input)
-    g1 = net_dg1.get_g(h_input)
-    g2 = net_dg2.get_g(h_input)
+    #g1 = net_dg1.get_g(h_input)
+    #g2 = net_dg2.get_g(h_input)
     
     #gpu_options = tf.GPUOptions(allow_growth=True)
     #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -204,7 +204,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
             loss_pre = net_ae1.loss_reconstruct(batch_x1) + net_ae2.loss_reconstruct(batch_x2)
             pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
-            pre_train.minimize(loss_pre)
+            print(net_ae1.netpara)
+            pre_train.minimize(loss_pre,var_list=net_ae1.netpara.extend(net_ae2.netpara))
             #_, val_pre = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2})
             err_pre.append(loss_pre)
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,

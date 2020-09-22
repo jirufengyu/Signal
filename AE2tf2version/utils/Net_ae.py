@@ -126,8 +126,28 @@ class Net_ae(object):
         loss_degra = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(z_half, g), 2.0))
         return loss_recon + self.para_lambda * loss_degra
 '''
+class SimpleDense(keras.layers.Layer):
+
+  def __init__(self, units=32):
+      super(SimpleDense, self).__init__()
+      self.units = units
+
+  def build(self, input_shape):  # Create the state of the layer (weights)
+    w_init = tf.random_normal_initializer()
+    self.w = tf.Variable(
+        initial_value=w_init(shape=(input_shape[-1], self.units),
+                             dtype='float32'),
+        trainable=True)
+    b_init = tf.zeros_initializer()
+    self.b = tf.Variable(
+        initial_value=b_init(shape=(self.units,), dtype='float32'),
+        trainable=True)
+
+  def call(self, inputs):  # Defines the computation from inputs to outputs
+      return tf.math.sigmoid(tf.linalg.matmul(inputs, self.w) + self.b)
+
 class Net_ae(object):
-    def __init__(self, input_dim,z_dim,para_lambda=1,activation="sigmod"):
+    def __init__(self, input_dim,z_dim,para_lambda=1,activation="sigmoid"):
         """
         Building view-specific autoencoder network
         :param v:  view number
@@ -140,11 +160,19 @@ class Net_ae(object):
         self.activation=activation
         self.z_dim=z_dim
         self.para_lambda=para_lambda
+        self.dense1=SimpleDense(self.z_dim)
+        self.dense2=SimpleDense(self.input_dim)
+        self.dense1.build(input_shape=[None,self.input_dim])
+        self.dense1.build(input_shape=[None,self.z_dim])
+        self.netpara=self.dense1.weights.extend(self.dense2.weights)
+        print("netpara:",self.netpara)
+        
+    
     def encoder(self,x):
-        return layers.Dense(self.z_dim,activation=self.activation)(x)
+        return self.dense1(x)
 
     def decoder(self,h):
-        return layers.Dense(self.input_dim,activation=self.activation)(h)
+        return self.dense2(h)
         
     def get_z(self,x):
         return self.encoder(x)
@@ -161,4 +189,4 @@ class Net_ae(object):
         loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
         loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
         return loss_recon+self.para_lambda*loss_degra
-        
+       
