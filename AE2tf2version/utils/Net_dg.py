@@ -1,7 +1,8 @@
 import tensorflow as tf
 from tensorflow.contrib import layers
-
-
+from tensorflow.keras import layers
+from tensorflow import keras
+'''
 class Net_dg(object):
     def __init__(self, v, dims_net, activation, reg=None):
         """
@@ -16,9 +17,9 @@ class Net_dg(object):
         self.activation = activation
         self.reg = reg
         if activation in ['tanh', 'sigmoid']:
-            self.initializer = layers.xavier_initializer()
+            self.initializer = None#layers.xavier_initializer()
         if activation == 'relu':
-            self.initializer = layers.xavier_initializer()
+            self.initializer = None#layers.xavier_initializer()
             # self.initializer=layers.variance_scaling_initializer(mode='FAN_AVG')
         self.weights, self.netpara = self.init_weights()
 
@@ -65,4 +66,16 @@ class Net_dg(object):
 
     def get_g(self, h):
         return self.degradation(h, self.weights)
-
+'''
+class Net_dg(object):
+    def __init__(self,z_dim,activation='sigmod'):
+        self.activation=activation
+        self.z_dim=z_dim
+    def degradation(self,h):
+        return layers.Dense(self.z_dim,activation=self.activation)(h)
+    def loss_degradation(self,h,z):
+        g=self.degradation(h)
+        loss=keras.losses.MSE(z,g)
+        return loss
+    def get_g(self,h):
+        return self.degradation(h)

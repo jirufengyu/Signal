@@ -1,6 +1,6 @@
 import tensorflow as tf
-from tensorflow.keras import layers
-from tensorflow import keras
+#from tensorflow.keras import layers
+#from tensorflow import keras
 from tensorflow.contrib import layers
 '''
 class Net_ae(object):
@@ -21,9 +21,9 @@ class Net_ae(object):
         self.activation = activation
         self.reg = reg
         if activation in ['tanh', 'sigmoid']:
-            self.initializer = layers.xavier_initializer()
+            self.initializer = None#layers.xavier_initializer()
         if activation == 'relu':
-            self.initializer = layers.variance_scaling_initializer(mode='FAN_AVG')
+            self.initializer = None#layers.variance_scaling_initializer(mode='FAN_AVG')
 
         self.weights, self.netpara = self.init_weights()
 
@@ -127,7 +127,7 @@ class Net_ae(object):
         return loss_recon + self.para_lambda * loss_degra
 '''
 class Net_ae(object):
-    def __init__(self, input_dim,h_dim,para_lambda=1,activation="sigmod",):
+    def __init__(self, input_dim,z_dim,para_lambda=1,activation="sigmod"):
         """
         Building view-specific autoencoder network
         :param v:  view number
@@ -138,13 +138,13 @@ class Net_ae(object):
         """
         self.input_dim=input_dim
         self.activation=activation
-        self.h_dim=h_dim
+        self.z_dim=z_dim
         self.para_lambda=para_lambda
     def encoder(self,x):
-        return layers.Dense(h_dim)(x)
+        return layers.Dense(self.z_dim,activation=self.activation)(x)
     def decoder(self,h):
-        return layers.Dense(self.input_dim)(h)
-    def get_h(self,x):
+        return layers.Dense(self.input_dim,activation=self.activation)(h)
+    def get_z(self,x):
         return self.encoder(x)
     def loss_reconstruct(self,x):
         h=self.encoder(x)
@@ -157,3 +157,4 @@ class Net_ae(object):
         loss_recon=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
         loss_degra=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(h,g),2.0))
         return loss_recon+self.para_lambda*loss_degra
+        
