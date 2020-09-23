@@ -104,3 +104,30 @@ class Net_dg(object):
 
     def get_g(self,h):
         return self.degradation(h)
+
+
+class Net_Dg(keras.layers.Layer):
+    def __init__(self,z_dim,h_dim,activation='sigmoid'):
+        super().__init__()
+        self.activation=activation
+        self.z_dim=z_dim
+        self.h_dim=h_dim
+        
+    def build(self, input_shape):
+        b_init = tf.zeros_initializer()
+        w_init = tf.random_normal_initializer()
+        self.w=self.add_weight(initializer=w_init,shape=[input_shape,self.z_dim],dtype=tf.float32,trainable=True)
+        self.b=self.add_weight(initializer=b_init,shape=self.z_dim,dtype=tf.float32,trainable=True)
+        
+        return super().build(input_shape)
+        
+    def degradation(self,h):
+        return tf.math.sigmoid(tf.linalg.matmul(tf.cast(h,dtype=tf.float32), self.w) + self.b)
+
+    def loss_degradation(self,h,z):
+        g=self.degradation(h)
+        loss=keras.losses.MSE(z,g)
+        return loss
+
+    def get_g(self,h):
+        return self.degradation(h)
