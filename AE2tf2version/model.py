@@ -171,58 +171,37 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     net_dg2.build(64)
     H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
     print(type(H))
-    #x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
-    #x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
+    
 
     h_input=tf.Variable(xavier_init(batch_size, dims[2][0]),dtype=tf.float32, name='LatentSpaceData')
-    #with tf.variable_scope("H"):
-     #   h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
-      #  h_list = tf.trainable_variables()
-   # fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
-   # fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
-
-    #loss_pre = net_ae1.loss_reconstruct(x1_input) + net_ae2.loss_reconstruct(x2_input)
+    
     pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
-    #pre_train.minimize(loss_pre)
-
-    #loss_ae = net_ae1.loss_total(x1_input, fea1_latent) + net_ae2.loss_total(x2_input, fea2_latent)
+  
     update_ae = keras.optimizers.Adam(lr[1])#.minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
 
-    #z_half1 = net_ae1.get_z(x1_input)
-    #z_half2 = net_ae2.get_z(x2_input)
-
-    #loss_dg = para_lambda * (
-       #         net_dg1.loss_degradation(h_input, fea1_latent) + net_dg2.loss_degradation(h_input, fea2_latent))
+    
     update_dg = keras.optimizers.Adam(lr[2])#.minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
 
     update_h = keras.optimizers.Adam(lr[3])#.minimize(loss_dg, var_list=h_input)
-    #g1 = net_dg1.get_g(h_input)
-    #g2 = net_dg2.get_g(h_input)
     
-    #gpu_options = tf.GPUOptions(allow_growth=True)
-    #sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
-    #sess.run(tf.global_variables_initializer())
 
     # init inner AEs
     
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
-            #tf.executing_eagerly()
             
-            #pre_train = keras.optimizers.Adam(lr[0])#.minimize(loss_pre)
             temp=[]
             temp.extend(net_ae1.trainable_variables)
             temp.extend(net_ae2.trainable_variables)
             
             with tf.GradientTape() as tape:
                 loss_pre = net_ae1.loss_reconstruct(batch_x1) + net_ae2.loss_reconstruct(batch_x2)
-                #tape.watch(temp)
+                
             grads = tape.gradient(loss_pre, temp)
             pre_train.apply_gradients(zip(grads,temp))
             
-            #pre_train.minimize(loss_pre,var_list=temp)
-            #_, val_pre = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2})
+            
             err_pre.append(loss_pre)
             
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
@@ -242,29 +221,21 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             batch_h = H[start_idx: end_idx, ...]
             batch_g1=g1 = net_dg1.get_g(h_input)
             batch_g2=g2 = net_dg2.get_g(h_input)
-            #batch_g1 = sess.run(g1, feed_dict={h_input: batch_h})
-            #batch_g2 = sess.run(g2, feed_dict={h_input: batch_h})
 
             # ADM-step1: optimize inner AEs and
-            
-            #_, val_ae = sess.run([update_ae, loss_ae], feed_dict={x1_input: batch_x1, x2_input: batch_x2,
-                #                                                fea1_latent: batch_g1, fea2_latent: batch_g2})
             temp=[]
             temp.extend(net_ae1.trainable_variables)
             temp.extend(net_ae2.trainable_variables)
             with tf.GradientTape() as tape:
                 loss_ae = net_ae1.loss_total(batch_x1, batch_g1) + net_ae2.loss_total(batch_x2, batch_g2)
-                #tape.watch(temp)
+                
             grads = tape.gradient(loss_ae, temp)
             update_ae.apply_gradients(zip(grads,temp))
-            
-            # get inter - layer features(i.e., z_half)
+
             batch_z_half1 = net_ae1.get_z(batch_x1)
             batch_z_half2 = net_ae2.get_z(batch_x2)
-            #batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
-            #batch_z_half2 = sess.run(z_half2, feed_dict={x2_input: batch_x2})
             tf.compat.v1.assign(h_input, batch_h)
-            #sess.run(tf.assign(h_input, batch_h))
+          
             # ADM-step2: optimize dg nets
             
             temp=[]
@@ -276,13 +247,10 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
                             net_dg2.loss_degradation(h_input, batch_z_half2))
             grads = tape.gradient(loss_dg, temp)
             update_dg.apply_gradients(zip(grads,temp))
-            
-            #_, val_dg = sess.run([update_dg, loss_dg], feed_dict={fea1_latent: batch_z_half1,
-                #                                                fea2_latent: batch_z_half2})
 
             # ADM-step3: update H
             for k in range(epochs[2]):
-                #sess.run(update_h, feed_dict={fea1_latent: batch_z_half1, fea2_latent: batch_z_half2})
+                
                 with tf.GradientTape() as tape:
                     val_dg=loss_dg = para_lambda * (
                                 net_dg1.loss_degradation(h_input, batch_z_half1) + 
@@ -290,21 +258,13 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
                 grads = tape.gradient(loss_dg, [h_input])
                 update_h.apply_gradients(zip(grads,[h_input]))
                 
-            
-            #print(type(H))
             t=keras.backend.eval(h_input)
-            #print(type(t))
+            
             H[start_idx: end_idx,] = t
 
-            # get latest feature_g for next iteration
-            #sess.run(tf.assign(h_input, batch_h_new))
-            #tf.compat.v1.assign(h_input, batch_h_new)
-            #batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
-            #batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
             batch_g1_new=g1 = net_dg1.get_g(batch_h)
             batch_g2_new=g2 = net_dg2.get_g(batch_h)
-            #val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
-             #                                       fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
+           
             val_total=loss_ae = net_ae1.loss_total(batch_x1, batch_g1_new) + net_ae2.loss_total(batch_x2, batch_g2_new)                                       
             err_total.append(val_total)
             print("epoch:       ",j+1)
