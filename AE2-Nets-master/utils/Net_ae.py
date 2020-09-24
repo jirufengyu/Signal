@@ -103,7 +103,8 @@ class Net_ae(object):
     def loss_reconstruct(self, x):
         z_half = self.encoder(x, self.weights)
         z = self.decoder(z_half, self.weights)
-        loss = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(x, z), 2.0))
+        #loss = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(x, z), 2.0))
+        loss=0.5*tf.losses.mean_squared_error(x, z)
         return loss
 
     def get_z_half(self, x):
@@ -121,6 +122,8 @@ class Net_ae(object):
         """
         z_half = self.encoder(x, self.weights)
         z = self.decoder(z_half, self.weights)
-        loss_recon = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(x, z), 2.0))
-        loss_degra = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(z_half, g), 2.0))
+        #loss_recon = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(x, z), 2.0))
+        #loss_degra = 0.5 * tf.reduce_mean(tf.pow(tf.subtract(z_half, g), 2.0))
+        loss_recon=0.5*tf.losses.mean_squared_error(x,z)
+        loss_degra=0.5*tf.losses.mean_squared_error(z_half, g)
         return loss_recon + self.para_lambda * loss_degra
