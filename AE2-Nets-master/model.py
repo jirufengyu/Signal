@@ -64,8 +64,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     sess.run(tf.global_variables_initializer())
     
-    writer = tf.summary.FileWriter("./mnist_nn_log",sess.graph)
-    writer.close()
+    #writer = tf.summary.FileWriter("./mnist_nn_log",sess.graph)
+    #writer.close()
     # init inner AEs
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
