@@ -62,14 +62,16 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     gpu_options = tf.GPUOptions(allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     sess.run(tf.global_variables_initializer())
-
+    
+    writer = tf.summary.FileWriter("./mnist_nn_log",sess.graph)
+    writer.close()
     # init inner AEs
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
             _, val_pre = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2})
             err_pre.append(val_pre)
-            
+
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
                                                                                                     val_pre)
             print(output)
@@ -92,7 +94,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             # ADM-step1: optimize inner AEs and
             _, val_ae = sess.run([update_ae, loss_ae], feed_dict={x1_input: batch_x1, x2_input: batch_x2,
                                                                 fea1_latent: batch_g1, fea2_latent: batch_g2})
-
+            print("!!!!!!!!!!!val_ae",val_ae)
             # get inter - layer features(i.e., z_half)
             batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
             batch_z_half2 = sess.run(z_half2, feed_dict={x2_input: batch_x2})
@@ -118,7 +120,9 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 
             val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
                                                     fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
+                                                    
             err_total.append(val_total)
+            
             output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
                                                                                                 (num_batch_i + 1),
                                                                                                 val_total)

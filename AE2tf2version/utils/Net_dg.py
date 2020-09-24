@@ -114,6 +114,7 @@ class Net_Dg(keras.layers.Layer):
         self.h_dim=h_dim
         
     def build(self, input_shape):
+        
         b_init = tf.zeros_initializer()
         w_init = tf.random_normal_initializer()
         self.w=self.add_weight(initializer=w_init,shape=[input_shape,self.z_dim],dtype=tf.float32,trainable=True)
@@ -127,6 +128,7 @@ class Net_Dg(keras.layers.Layer):
     def loss_degradation(self,h,z):
         g=self.degradation(h)
         loss=keras.losses.MSE(z,g)
+        #loss=tf.math.reduce_mean(tf.math.pow(tf.math.subtract(z,g),2.0))
         return loss
 
     def get_g(self,h):

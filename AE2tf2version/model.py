@@ -201,7 +201,6 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             grads = tape.gradient(loss_pre, temp)
             pre_train.apply_gradients(zip(grads,temp))
             
-            
             err_pre.append(loss_pre)
             
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
@@ -219,8 +218,9 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             batch_x1 = X1[start_idx: end_idx, ...]
             batch_x2 = X2[start_idx: end_idx, ...]
             batch_h = H[start_idx: end_idx, ...]
-            batch_g1=g1 = net_dg1.get_g(h_input)
-            batch_g2=g2 = net_dg2.get_g(h_input)
+            
+            batch_g1= net_dg1.get_g(h_input)
+            batch_g2= net_dg2.get_g(h_input)
 
             # ADM-step1: optimize inner AEs and
             temp=[]
@@ -228,7 +228,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             temp.extend(net_ae2.trainable_variables)
             with tf.GradientTape() as tape:
                 loss_ae = net_ae1.loss_total(batch_x1, batch_g1) + net_ae2.loss_total(batch_x2, batch_g2)
-                
+            print("!!!!!!!!!!!loss_ae",loss_ae[-1])
             grads = tape.gradient(loss_ae, temp)
             update_ae.apply_gradients(zip(grads,temp))
 
@@ -236,7 +236,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             batch_z_half2 = net_ae2.get_z(batch_x2)
             tf.compat.v1.assign(h_input, batch_h)
           
-            # ADM-step2: optimize dg nets
+            # !ADM-step2: optimize dg nets
             
             temp=[]
             temp.extend(net_dg1.trainable_variables)
@@ -248,7 +248,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             grads = tape.gradient(loss_dg, temp)
             update_dg.apply_gradients(zip(grads,temp))
 
-            # ADM-step3: update H
+            # !ADM-step3: update H
             for k in range(epochs[2]):
                 
                 with tf.GradientTape() as tape:
@@ -262,16 +262,16 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             
             H[start_idx: end_idx,] = t
 
-            batch_g1_new=g1 = net_dg1.get_g(batch_h)
-            batch_g2_new=g2 = net_dg2.get_g(batch_h)
+            batch_g1_new = net_dg1.get_g(h_input)#(batch_h)
+            batch_g2_new = net_dg2.get_g(h_input)#(batch_h)
            
             val_total=loss_ae = net_ae1.loss_total(batch_x1, batch_g1_new) + net_ae2.loss_total(batch_x2, batch_g2_new)                                       
             err_total.append(val_total)
-            print("epoch:       ",j+1)
-            #output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
-             #                                                                                   (num_batch_i + 1),
-             #                                                                                   val_total)
-            #print(output)
+            #print("epoch:       ",j+1)
+            output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
+                                                                                                (num_batch_i + 1),
+                                                                                                val_total[-1])
+            print(output)
 
     elapsed = (timeit.default_timer() - start)
     print("Time used: ", elapsed)

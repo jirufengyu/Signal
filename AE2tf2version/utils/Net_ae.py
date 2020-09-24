@@ -206,6 +206,7 @@ class Net_Ae(keras.layers.Layer):
         self.para_lambda=para_lambda
         
     def build(self, input_shape):
+        
         b_init = tf.zeros_initializer()
         w_init = tf.random_normal_initializer()
         self.w1=self.add_weight(initializer=w_init,shape=[input_shape,self.z_dim],dtype=tf.float32,trainable=True)
@@ -220,14 +221,15 @@ class Net_Ae(keras.layers.Layer):
 
     def decoder(self,h):
         return tf.math.sigmoid(tf.linalg.matmul(h, self.w2) + self.b2)
-        
+             
     def get_z(self,x):
+       
         return self.encoder(x)
     
     def loss_reconstruct(self,x):
         h=self.encoder(x)
         x_recon=self.decoder(h)
-        loss=keras.losses.MSE(x,x_recon)
+        loss=0.5*keras.losses.MSE(x,x_recon)
         #loss=0.5*tf.math.reduce_mean(tf.math.pow(tf.math.subtract(x,x_recon),2.0))
         return loss
 
