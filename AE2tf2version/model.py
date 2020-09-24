@@ -187,8 +187,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 
     # init inner AEs
     
-    writer = tf.summary.create_file_writer("./log")
-    tf.summary.trace_on(graph=True, profiler=True)
+    #writer = tf.summary.create_file_writer("./log")
+    #tf.summary.trace_on(graph=True, profiler=True)
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
@@ -274,11 +274,11 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
                                                                                                 (num_batch_i + 1),
                                                                                                 val_total[-1])
             print(output)
-    with writer.as_default():
-        tf.summary.trace_export(
-            name="my_func_trace",
-            step=0,
-            profiler_outdir="./log")
+    #with writer.as_default():
+    #    tf.summary.trace_export(
+    #        name="my_func_trace",
+    #        step=0,
+    #        profiler_outdir="./log")
     elapsed = (timeit.default_timer() - start)
     print("Time used: ", elapsed)
     scio.savemat('H.mat', mdict={'H': H, 'gt': gt, 'loss_total': err_total, 'time': elapsed,

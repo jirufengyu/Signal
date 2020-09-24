@@ -128,6 +128,7 @@ class RBM(object):
         return out
 
 # %%
+
 rbm=RBM(784,500)
 rbm.train(train_images,epochs=100)
 out=rbm.rbm_outpt(train_images)

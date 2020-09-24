@@ -52,7 +52,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     z_half2 = net_ae2.get_z_half(x2_input)
 
     loss_dg = para_lambda * (
-                net_dg1.loss_degradation(h_input, fea1_latent) + net_dg2.loss_degradation(h_input, fea2_latent))
+                net_dg1.loss_degradation(h_input, fea1_latent) 
+                + net_dg2.loss_degradation(h_input, fea2_latent))
     update_dg = tf.train.AdamOptimizer(lr[2]).minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
 
     update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
