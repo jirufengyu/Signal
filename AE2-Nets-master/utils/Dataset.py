@@ -7,7 +7,7 @@ import scipy.io
 
 class Dataset():
     def __init__(self, name):
-        self.path = '/root/my/Signal/AE2-Nets-master/dataset/'
+        self.path = '/home/stu2/Signal-1/AE2-Nets-master/dataset/'
         self.name = name
 
     def load_data(self):

@@ -13,7 +13,7 @@ class RBM_t1(object):
         # Defining the hyperparameters
         self._input_size = input_size  # Size of input
         self._output_size = output_size  # Size of output
-        self.epochs = 5  # Amount of training iterations
+        self.epochs = 10  # Amount of training iterations
         self.learning_rate = 1.0  # The step used in gradient descent
         self.batchsize = 100  # The size of how much data will be used for training per sub iteration
 
@@ -75,15 +75,15 @@ class RBM_t1(object):
             # For each epoch
             for epoch in range(self.epochs):
                 # For each step/batch
-                for start, end in zip(range(0, len(X), self.batchsize), range(self.batchsize, len(X), self.batchsize)):
-                    batch = X[start:end]
-                    # Update the rates
-                    cur_w = sess.run(update_w, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    prv_w = cur_w
-                    prv_hb = cur_hb
-                    prv_vb = cur_vb
+                #for start, end in zip(range(0, len(X), self.batchsize), range(self.batchsize, len(X), self.batchsize)):
+                batch = X#[start:end]
+                # Update the rates
+                cur_w = sess.run(update_w, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                prv_w = cur_w
+                prv_hb = cur_hb
+                prv_vb = cur_vb
                 error = sess.run(err, feed_dict={v0: X, _w: cur_w, _vb: cur_vb, _hb: cur_hb})
                 print('Epoch: %d' % epoch, 'reconstruction error: %f' % error)
             self.w = prv_w
@@ -91,7 +91,7 @@ class RBM_t1(object):
             self.vb = prv_vb
 
     # Create expected output for our DBN
-    def rbm_outpt(self, X):
+    def rbm_output(self, X):
         input_X = tf.constant(X)
         _w = tf.constant(self.w)
         _hb = tf.constant(self.hb)
@@ -120,23 +120,25 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     # define each net architecture and variable(refer to framework-simplified)
     net_ae1 = Net_ae(1, dims[0], para_lambda, act[0])
     net_ae2 = Net_ae(2, dims[1], para_lambda, act[1])
-    rbm=RBM_t1(400,128)
+    rbm0=RBM_t1(200,64)
+    rbm1=RBM_t1(200,64)
 
     H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]*2])
+    
     x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
     x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
 
     with tf.variable_scope("H"):
         h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
         h_list = tf.trainable_variables()
-    fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
-    fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
+    #fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
+    #fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
 
     loss_pre = net_ae1.loss_reconstruct(x1_input) + net_ae2.loss_reconstruct(x2_input)
     pre_train = tf.train.AdamOptimizer(lr[0]).minimize(loss_pre)
 
-    loss_ae = net_ae1.loss_total(x1_input, fea1_latent) + net_ae2.loss_total(x2_input, fea2_latent)
-    update_ae = tf.train.AdamOptimizer(lr[1]).minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
+    #loss_ae = net_ae1.loss_total(x1_input, fea1_latent) + net_ae2.loss_total(x2_input, fea2_latent)
+    #update_ae = tf.train.AdamOptimizer(lr[1]).minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
     z_half1 = net_ae1.get_z_half(x1_input)
     z_half2 = net_ae2.get_z_half(x2_input)
 
@@ -173,14 +175,20 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             
 
             # ADM-step1: optimize inner AEs and
-            _, val_ae = sess.run([pre_train, loss_ae], feed_dict={x1_input: batch_x1, x2_input: batch_x2,})
+            _, val_ae = sess.run([pre_train, loss_pre], feed_dict={x1_input: batch_x1, x2_input: batch_x2,})
             print("!!!!!!!!!!!val_ae",val_ae)
             # get inter - layer features(i.e., z_half)
             batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
             batch_z_half2 = sess.run(z_half2, feed_dict={x2_input: batch_x2})
-            concat_Z=tf.concat([batch_z_half1,batch_z_half2])
-            rbm.train(concat_Z)
-            H[start_idx: end_idx, ...] = rbm.rbm_outpt(concat_Z)
+            rbm0.train(batch_z_half1)
+            rbm1.train(batch_z_half2)
+            t1=rbm0.rbm_output(batch_z_half1)
+            t2=rbm1.rbm_output(batch_z_half2)
+            concat_Z=tf.concat([t1,t2],1)
+            with sess.as_default():
+                concat_Z=concat_Z.eval()
+            print(H.shape)
+            H[start_idx: end_idx, ...] = concat_Z
             '''
             sess.run(tf.assign(h_input, batch_h))
             # ADM-step2: optimize dg nets
