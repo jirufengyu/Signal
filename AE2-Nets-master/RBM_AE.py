@@ -75,21 +75,75 @@ class RBM_t1(object):
             # For each epoch
             for epoch in range(self.epochs):
                 # For each step/batch
-                for start, end in zip(range(0, len(X), self.batchsize), range(self.batchsize, len(X), self.batchsize)):
-                    batch = X[start:end]
-                    # Update the rates
-                    cur_w = sess.run(update_w, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
-                    prv_w = cur_w
-                    prv_hb = cur_hb
-                    prv_vb = cur_vb
+                #for start, end in zip(range(0, len(X), self.batchsize), range(self.batchsize, len(X), self.batchsize)):
+                batch = X#[start:end]
+                # Update the rates
+                cur_w = sess.run(update_w, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                prv_w = cur_w
+                prv_hb = cur_hb
+                prv_vb = cur_vb
                 error = sess.run(err, feed_dict={v0: X, _w: cur_w, _vb: cur_vb, _hb: cur_hb})
                 print('Epoch: %d' % epoch, 'reconstruction error: %f' % error)
             self.w = prv_w
             self.hb = prv_hb
             self.vb = prv_vb
+            
+#!输入隐层更新浅层
+    def fromH_getV(self, X):
+        # Create the placeholders for our parameters
+        _w = tf.placeholder("float", [self._input_size, self._output_size])
+        _hb = tf.placeholder("float", [self._output_size])
+        _vb = tf.placeholder("float", [self._input_size])
 
+        prv_w = np.zeros([self._input_size, self._output_size],
+                         np.float32)  # Creates and initializes the weights with 0
+        prv_hb = np.zeros([self._output_size], np.float32)  # Creates and initializes the hidden biases with 0
+        prv_vb = np.zeros([self._input_size], np.float32)  # Creates and initializes the visible biases with 0
+
+        cur_w = np.zeros([self._input_size, self._output_size], np.float32)
+        cur_hb = np.zeros([self._output_size], np.float32)
+        cur_vb = np.zeros([self._input_size], np.float32)
+        v0 = tf.placeholder("float", [None, self._input_size])
+
+        # Initialize with sample probabilities
+        h0 = self.sample_prob(self.prob_h_given_v(v0, _w, _hb))
+        v1 = self.sample_prob(self.prob_v_given_h(h0, _w, _vb))
+        h1 = self.prob_h_given_v(v1, _w, _hb)
+
+        # Create the Gradients
+        positive_grad = tf.matmul(tf.transpose(v0), h0)
+        negative_grad = tf.matmul(tf.transpose(v1), h1)
+
+        # Update learning rates for the layers
+        update_w = _w + self.learning_rate * (positive_grad - negative_grad) / tf.to_float(tf.shape(v0)[0])
+        update_vb = _vb + self.learning_rate * tf.reduce_mean(v0 - v1, 0)
+        update_hb = _hb + self.learning_rate * tf.reduce_mean(h0 - h1, 0)
+
+        # Find the error rate
+        err = tf.reduce_mean(tf.square(v0 - v1))
+
+        # Training loop
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            # For each epoch
+            for epoch in range(self.epochs):
+                # For each step/batch
+                #for start, end in zip(range(0, len(X), self.batchsize), range(self.batchsize, len(X), self.batchsize)):
+                batch = X#[start:end]
+                # Update the rates
+                cur_w = sess.run(update_w, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_hb = sess.run(update_hb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                cur_vb = sess.run(update_vb, feed_dict={v0: batch, _w: prv_w, _hb: prv_hb, _vb: prv_vb})
+                prv_w = cur_w
+                prv_hb = cur_hb
+                prv_vb = cur_vb
+                error = sess.run(err, feed_dict={v0: X, _w: cur_w, _vb: cur_vb, _hb: cur_hb})
+                print('Epoch: %d' % epoch, 'reconstruction error: %f' % error)
+            self.w = prv_w
+            self.hb = prv_hb
+            self.vb = prv_vb
     # Create expected output for our DBN
     def rbm_outpt(self, X):
         input_X = tf.constant(X)
@@ -123,6 +177,9 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     net_dg1 = Net_dg(1, dims[2], act[2])
     net_dg2 = Net_dg(2, dims[3], act[3])
 
+    rbm0=RBM_t1(240,200)
+    rbm1=RBM_t1(216,200)
+
     H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
     x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
     x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
@@ -133,11 +190,11 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     fea1_latent = tf.placeholder(np.float32, [None, dims[0][-1]])
     fea2_latent = tf.placeholder(np.float32, [None, dims[1][-1]])
 
-    loss_pre = net_ae1.loss_reconstruct(x1_input) + net_ae2.loss_reconstruct(x2_input)
-    pre_train = tf.train.AdamOptimizer(lr[0]).minimize(loss_pre)
+    #loss_pre = net_ae1.loss_reconstruct(x1_input) + net_ae2.loss_reconstruct(x2_input)
+    #pre_train = tf.train.AdamOptimizer(lr[0]).minimize(loss_pre)
 
-    loss_ae = net_ae1.loss_total(x1_input, fea1_latent) + net_ae2.loss_total(x2_input, fea2_latent)
-    update_ae = tf.train.AdamOptimizer(lr[1]).minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
+    #loss_ae = net_ae1.loss_total(x1_input, fea1_latent) + net_ae2.loss_total(x2_input, fea2_latent)
+    #0000000update_ae = tf.train.AdamOptimizer(lr[1]).minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
     z_half1 = net_ae1.get_z_half(x1_input)
     z_half2 = net_ae2.get_z_half(x2_input)
 
@@ -157,6 +214,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     #writer = tf.summary.FileWriter("./mnist_nn_log",sess.graph)
     #writer.close()
     # init inner AEs
+    '''
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
@@ -166,7 +224,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
                                                                                                     val_pre)
             print(output)
-
+'''
     # the whole training process(ADM)
     num_samples = X1.shape[0]
     num_batchs = math.ceil(num_samples / batch_size)  # fix the last batch

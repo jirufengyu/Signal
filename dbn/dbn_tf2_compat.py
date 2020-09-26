@@ -1,4 +1,4 @@
-
+#compat t1
 import tensorflow as tf
 import numpy as np
 import tensorflow.compat.v1 as tf1
@@ -61,6 +61,7 @@ class RBM(object):
                     prv_w=cur_w
                     prv_hb=cur_hb
                     prv_vb=cur_vb
+                    print("prv_w",prv_w)
                 error=sess.run(err,feed_dict={v0:X,_w: cur_w, _vb: cur_vb, _hb: cur_hb})
 
 
