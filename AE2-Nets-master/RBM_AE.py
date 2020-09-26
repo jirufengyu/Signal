@@ -130,12 +130,17 @@ class RBM(object):
         self.vb=prv_vb
 
     def rbm_output(self, X):
-        input_X = tf.constant(X)
-        _w = tf.constant(self.w)
-        _hb = tf.constant(self.hb)
-        out = tf.nn.sigmoid(tf.matmul(input_X, _w) + _hb)
+        #for i,tensor in enumerate(X):
+         #   with tf.Session() as sess:
+          #      t=tensor.eval()
+        #print(X)
+        #input_X = tf.constant(X)
+        #_w = tf.constant(self.w)
+        #_hb = tf.constant(self.hb)
+        X=tf.cast(X,tf.float32)
+        out = tf.nn.sigmoid(tf.matmul(X, self.w) + self.hb)
         with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
+            #sess.run(tf.global_variables_initializer())
             return sess.run(out)
     
     def rbm_output_reverse(self,X):
@@ -191,8 +196,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     #update_ae = tf.train.AdamOptimizer(lr[1]).minimize(loss_ae, var_list=net_ae1.netpara.extend(net_ae2.netpara))
     #z_half1 = net_ae1.get_z_half(x1_input)
     #z_half2 = net_ae2.get_z_half(x2_input)
-    z_half1=rbm0.rbm_output(x1_input)
-    z_half2=rbm1.rbm_output(x1_input)
+    #z_half1=rbm0.rbm_output(x1_input)
+    #z_half2=rbm1.rbm_output(x1_input)
     loss_dg = para_lambda * (
                 net_dg1.loss_degradation(h_input, fea1_latent) 
                 + net_dg2.loss_degradation(h_input, fea2_latent))
@@ -244,9 +249,10 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             rbm1.reverse_train(batch_g2)
 
             # get inter - layer features(i.e., z_half)
-            batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
-            batch_z_half2 = sess.run(z_half2, feed_dict={x2_input: batch_x2})
-
+            #batch_z_half1 = sess.run(z_half1, feed_dict={x1_input: batch_x1})
+            #batch_z_half2 = sess.run(z_half2, feed_dict={x2_input: batch_x2})
+            batch_z_half1=rbm0.rbm_output(batch_x1)
+            batch_z_half2=rbm1.rbm_output(batch_x2)
             sess.run(tf.assign(h_input, batch_h))
             # ADM-step2: optimize dg nets
             
@@ -275,6 +281,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
              #                                                                                   (num_batch_i + 1),
               #                                                                                  val_total)
             #print(output)
+            print("epoch:",j+1)
 
     elapsed = (timeit.default_timer() - start)
     print("Time used: ", elapsed)
