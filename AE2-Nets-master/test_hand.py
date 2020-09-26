@@ -1,5 +1,5 @@
 from utils.Dataset import Dataset
-from model import model
+from RBM_AE import model
 from utils.print_result import print_result
 import os
 

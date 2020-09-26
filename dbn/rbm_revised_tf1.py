@@ -40,12 +40,18 @@ class RBM(object):
         h0=tf.cast(h,tf.float32)
 
         v0=self.sample_prob(self.prob_v_given_h(h0,_w,_vb))
-        h1=self.sample_prob(self.prob_h_given_v(v0,_w,_vb))
-        v1=self.prob_v_given_h(h1,_w,_hb)
+        h1=self.sample_prob(self.prob_h_given_v(v0,_w,_hb))
+        v1=self.prob_v_given_h(h1,_w,_vb)
 
-        positive_grad=tf.matmul(tf.transpose(h0),v0)
-        negative_grad=tf.matmul(tf.transpose(h1),v1)
-
+        positive_grad=tf.matmul(tf.transpose(v0),h0)
+        negative_grad=tf.matmul(tf.transpose(v1),h1)
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        #!
+        #!
+        # TODO:把positive_grad-negative_grad改为negative_grad-positive_grad试试效果
+        #!
+        #!
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         update_w=_w+self.learning_rate*(positive_grad-negative_grad)/tf.to_float(tf.shape(h0)[0])
         update_hb=_hb+self.learning_rate*tf.reduce_mean(h0-h1,0)
         update_vb=_vb+self.learning_rate*tf.reduce_mean(v0-v1,0)
@@ -92,7 +98,7 @@ class RBM(object):
         _w = tf.placeholder("float", [self._input_size, self._output_size])
         _hb = tf.placeholder("float", [self._output_size])
         _vb = tf.placeholder("float", [self._input_size])
-        cur_wt,cur_hbt,cur_vbt,_t=self.runG(v0,_w,_hb,_vb)
+        cur_wt,cur_hbt,cur_vbt,_t=self.reverse_runG(v0,_w,_hb,_vb)
 
         #cur_w=np.zeros([self._input_size,self._output_size],np.float32)
         #cur_hb=np.zeros([self._output_size],np.float32)
@@ -134,10 +140,10 @@ class RBM(object):
             sess.run(tf.global_variables_initializer())
             return sess.run(out)
 
-
+'''
 #mnist = input_data.read_data_sets("MNIST_data/")
 #trX, trY = mnist.train.images, mnist.train.labels
-trX=np.array(500,784)
+trX=np.random.rand(30,500)
 rbm=RBM(784,500)
 
-rbm.reverse_train(trX)
+rbm.reverse_train(trX)'''

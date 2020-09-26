@@ -157,7 +157,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     #writer = tf.summary.FileWriter("./mnist_nn_log",sess.graph)
     #writer.close()
     # init inner AEs
-    '''
+    
     for k in range(epochs[0]):
         X1, X2, gt = shuffle(X1, X2, gt)
         for batch_x1, batch_x2, batch_No in next_batch(X1, X2, batch_size):
@@ -166,7 +166,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
 
             output = "Pre_epoch : {:.0f}, Batch : {:.0f}  ===> Reconstruction loss = {:.4f} ".format((k + 1), batch_No,
                                                                                                     val_pre)
-            print(output)'''
+            print(output)
 
     # the whole training process(ADM)
     num_samples = X1.shape[0]
