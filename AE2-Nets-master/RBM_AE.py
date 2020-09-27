@@ -59,7 +59,7 @@ class RBM(object):
         #!
         #!
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        update_w=_w+self.learning_rate*(positive_grad-negative_grad)/tf.to_float(tf.shape(h0)[0])
+        update_w=_w+self.learning_rate*(negative_grad-positive_grad)/tf.to_float(tf.shape(h0)[0])
         update_hb=_hb+self.learning_rate*tf.reduce_mean(h0-h1,0)
         update_vb=_vb+self.learning_rate*tf.reduce_mean(v0-v1,0)
         loss=tf.reduce_mean(tf.square(h0-h1))
