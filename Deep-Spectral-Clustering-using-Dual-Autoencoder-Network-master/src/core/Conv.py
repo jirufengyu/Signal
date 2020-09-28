@@ -2,7 +2,7 @@ from keras.layers import *
 from keras.models import Model
 from keras import backend as K
 import tensorflow as tf
-
+import numpy as np
 from .layer import stack_layers
 from . import costs
 
@@ -11,7 +11,7 @@ class ConvAE:
 
     def __init__(self,x,params):
         self.x = x
-        self.P = tf.eye(tf.shape(self.x)[0])
+        self.P = tf.eye(tf.shape(self.x)[0])  #构造单位矩阵
         h = x
 
 
@@ -49,7 +49,7 @@ class ConvAE:
             h = LeakyReLU(0.2)(h)
 
 
-        h_shape = K.int_shape(h)[1:]
+        h_shape = K.int_shape(h)[1:]  #以整型或无元组的形式返回张量或变量的形状。
         h = Flatten()(h)
 
         z_mean = Dense(latent_dim)(h)
@@ -74,17 +74,17 @@ class ConvAE:
                                 padding='same')(h)
             h = LeakyReLU(0.2)(h)
             filters //= 2
-
+        #? 这个有什么用处，重构的图片还和原图片大小相等吗
         x_recon = Conv2DTranspose(filters=1,
                                 kernel_size=3,
                                 activation='sigmoid',
                                 padding='same')(h)
 
         self.decoder = Model(z, x_recon)
-
+        #! 带有噪声的重构
         x_recon1 = self.decoder(z_mean)
 
-
+        #?W是什么东西
         W = costs.knn_affinity(z_mean, params['n_nbrs'], scale=2.62, scale_nbr=params['scale_nbr'])
         W = W - self.P
 
@@ -115,7 +115,7 @@ class ConvAE:
         loss_SPNet = (K.sum(W * Dy))/1024
 
 
-
+        #! 从mean和log重构
         def sampling(args):
             z_mean, z_log_var = args
             epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dim))
@@ -130,8 +130,8 @@ class ConvAE:
             return K.gather(x, idxs)
 
         z_shuffle = Lambda(shuffling)(z)
-        z_z_1 = Concatenate()([z, z])
-        z_z_2 = Concatenate()([z, z_shuffle])
+        z_z_1 = Concatenate()([z, z])       # replicated feature vector
+        z_z_2 = Concatenate()([z, z_shuffle])    # drawn from another image
 
         z_in = Input(shape=(latent_dim * 2,))
         z1 = z_in
@@ -144,9 +144,13 @@ class ConvAE:
 
         z_z_1_scores = GlobalDiscriminator(z_z_1)
         z_z_2_scores = GlobalDiscriminator(z_z_2)
+        # z_z_1_scores越高越好，z_z_2_scores越低越好
         global_info_loss = - K.mean(K.log(z_z_1_scores + 1e-6) + K.log(1 - z_z_2_scores + 1e-6))
+
+        #? gaussian是干嘛的
         gaussian = Gaussian(num_classes)
         z_prior_mean = gaussian(z)
+        #!  VAE
         self.vae = Model(x, [x_recon1, z_prior_mean,y])
 
         z_mean = K.expand_dims(z_mean, 1)

@@ -27,7 +27,7 @@ def Orthonorm(x, name=None):
     '''
     Builds keras layer that handles orthogonalization of x
 
-    x:      an n x d input matrix
+    x:      an n x d input matrix 
     name:   name of the keras layer
 
     returns:    a keras layer instance. during evaluation, the instance returns an n x d orthogonal matrix
