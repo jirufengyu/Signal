@@ -17,7 +17,7 @@ def run_net(data, params):
 
     inputs_vae = Input(shape=(params['img_dim'], params['img_dim'], 1), name='inputs_vae')
     ConvAE = Conv.ConvAE(inputs_vae,params)
-    ConvAE.vae.load_weights('vae_mnist.h5')
+    ConvAE.vae.load_weights('/home/stu2/Signal-1/Deep-Spectral-Clustering-using-Dual-Autoencoder-Network-master/src/applications/vae_mnist.h5')
 
     lh = LearningHandler(lr=params['spec_lr'], drop=params['spec_drop'], lr_tensor=ConvAE.learning_rate,
                          patience=params['spec_patience'])
