@@ -109,7 +109,7 @@ class ConvAE:
         outputs = stack_layers(y,layers)
 
 
-        Dy = costs.squared_distance(outputs)
+        Dy = costs.00(outputs)
 
 
         loss_SPNet = (K.sum(W * Dy))/1024
