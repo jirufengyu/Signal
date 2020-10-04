@@ -26,7 +26,7 @@ def run_net(data, params):
 
 
     losses_vae = np.empty((500,))
-    for i in range(500):
+    for i in range(20):
         # if i==0:
         x_val_y = ConvAE.vae.predict(x_val)[2]  #得到y
         losses_vae[i] = ConvAE.train_vae(x_val,x_val_y, params['batch_size'])
