@@ -112,7 +112,7 @@ class ConvAE:
         Dy = costs.00(outputs)
 
 
-        loss_SPNet = (K.sum(W * Dy))/1024
+        loss_SPNet = (K.sum(W * Dy))/1024       #!L_c
 
 
         #! 从mean和log重构
@@ -156,8 +156,8 @@ class ConvAE:
         z_mean = K.expand_dims(z_mean, 1)
         z_log_var = K.expand_dims(z_log_var, 1)
         lamb = 5
-        xent_loss = 1 * K.mean((x - x_recon) ** 2, 0)
-        xent1_loss = 0.5 * K.mean((x_recon1 - x_recon) ** 2, 0)
+        xent_loss = 1 * K.mean((x - x_recon) ** 2, 0)       #!L_r
+        xent1_loss = 0.5 * K.mean((x_recon1 - x_recon) ** 2, 0)     #!L_r
         kl_loss = - 0.5 * (1 + z_log_var - K.square(z_mean - z_prior_mean) - K.exp(z_log_var))
         kl_loss = K.mean(K.batch_dot(K.expand_dims(y, 1),kl_loss), 0)
         cat_loss = K.mean(y * K.log(y + K.epsilon()), 0)
