@@ -122,6 +122,7 @@ class ConvAE:
             return z_mean + K.exp(z_log_var / 2) * epsilon
 
         z = Lambda(sampling, output_shape=(latent_dim,))([z_mean, z_log_var])
+        print("!!!!!!!",z)
         x_recon = self.decoder(z)
 
         def shuffling(x):

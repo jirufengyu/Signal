@@ -18,8 +18,12 @@ if __name__ == '__main__':
     act_ae1, act_ae2, act_dg1, act_dg2 = 'sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'
     dims_ae1 = [240, 200]
     dims_ae2 = [216, 200]
+    #原来的
     dims_dg1 = [64, 200]
     dims_dg2 = [64, 200]
+    #现在用的
+    dims_dg1 = [64, 100]
+    dims_dg2 = [64, 100]
 
     para_lambda = 1
     batch_size = 100

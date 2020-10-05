@@ -5,7 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 import matplotlib.pyplot as plt
 from keras.layers import Input
 from core.util import print_accuracy,LearningHandler
-from core import ConvRevised
+from core import Conv
 
 import tensorflow as tf
 def run_net(data, params):
@@ -16,7 +16,7 @@ def run_net(data, params):
     x_train_unlabeled, y_train_unlabeled, x_val, y_val, x_test, y_test = data['spectral']['train_and_test']
 
     inputs_vae = Input(shape=(params['img_dim'], params['img_dim'], 1), name='inputs_vae')
-    ConvAE = ConvRevised.ConvAE(inputs_vae,params)
+    ConvAE = Conv.ConvAE(inputs_vae,params)
     ConvAE.vae.load_weights('/home/stu2/Signal-1/Deep-Spectral-Clustering-using-Dual-Autoencoder-Network-master/src/applications/vae_mnist.h5')
 
     lh = LearningHandler(lr=params['spec_lr'], drop=params['spec_drop'], lr_tensor=ConvAE.learning_rate,

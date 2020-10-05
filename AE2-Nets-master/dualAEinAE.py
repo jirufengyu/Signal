@@ -35,28 +35,14 @@ class dualModel:
         x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
         x1_input0=Input([None, dims[0][0]],tensor=x1_input)
         x2_input0=Input([None, dims[1][0]],tensor=x2_input)
-        '''
-        self.dims=dims
-        x1=X1
-        self.latent_dim=100
-        h=Dense(200,activation="sigmoid")(x1)
-        z_mean=Dense(self.latent_dim)(h)
-        z_log_var=Dense(self.latent_dim)(h)
-        self.encoder1=Model(x1,z_mean)
-        z=Input(shape=(self.latent_dim,))
-        h=z
-        h=Dense(200,activation="sigmoid")(h)
-        h=Dense(dims[0][0],activation="sigmoid")(h)
-        self.decoder1=Model(z,h)
-        x_recon1_noise=self.decoder1(z_mean)
-        '''
+    
         z_mean1,z_log_var1=self.encoder(x1_input0)
         z_mean2,z_log_var2=self.encoder(x2_input0)
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
 
-        x_recon1=self.decoder(z1_input)
-        x_recon2=self.decoder(z2_input)
+        x_recon1=self.decoder(z1_input,240)
+        x_recon2=self.decoder(z2_input,216)
 
         self.encoder1=Model(x1_input,z_mean1)
         self.encoder2=Model(x2_input,z_mean2)
@@ -71,12 +57,12 @@ class dualModel:
 
         z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
         z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
-        x_recon1_true = self.decoder(z1)            #不带噪声的loss
-        x_recon2_true=self.decoder(z2)
+        x_recon1_true = self.decoder1(z1)            #不带噪声的loss
+        x_recon2_true=self.decoder2(z2)
 
         #! fea_latent
-        fea1_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
-        fea2_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
+        fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
+        fea2_latent=tf.placeholder(np.float32, [None, latent_dim])
         loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
         loss_degra2=0.5*tf.losses.mean_squared_error(z2, fea2_latent)
 
@@ -93,8 +79,8 @@ class dualModel:
         z_z_2_true=Concatenate()([z2,z2])
         z_z_2_false=Concatenate()([z2,z2_shuffle])
 
-        z1_in=Input(shape=(latent_dim*2))
-        z2_in=Input(shape=(latent_dim*2))
+        z1_in=Input(shape=(latent_dim*2,))
+        z2_in=Input(shape=(latent_dim*2,))
         z1_discr=self.discriminator(z1_in)
         z2_discr=self.discriminator(z2_in)
         GlobalDiscriminator1=Model(z1_in,z1_discr)
@@ -107,8 +93,8 @@ class dualModel:
         global_info_loss2=-K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
 
         lamb=5
-        x1ent_loss=1*K.mean((X1-x_recon1_true)**2,0)
-        x2ent_loss=1*K.mean((X2-x_recon2_true)**2,0)
+        x1ent_loss=1*K.mean((x1_input-x_recon1_true)**2,0)
+        x2ent_loss=1*K.mean((x2_input-x_recon2_true)**2,0)
         x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
         x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
         loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1)
@@ -201,10 +187,10 @@ class dualModel:
         z_mean=Dense(self.latent_dim)(h)
         z_log_var=Dense(self.latent_dim)(h)
         return z_mean,z_log_var
-    def decoder(self,z):
+    def decoder(self,z,dim):
         h=z
         h=Dense(200,activation="sigmoid")(h)
-        h=Dense(self.dims[0][0],activation="sigmoid")(h)
+        h=Dense(dim,activation="sigmoid")(h)  #输出的维度与解码器输入的维度相同
         return h
     def discriminator(self,z):
         z1=Dense(self.latent_dim,activation='relu')(z)
