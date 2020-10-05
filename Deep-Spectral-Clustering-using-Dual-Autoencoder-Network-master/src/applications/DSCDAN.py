@@ -5,7 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '0'
 import matplotlib.pyplot as plt
 from keras.layers import Input
 from core.util import print_accuracy,LearningHandler
-from core import Conv
+from core import ConvRevised
 
 import tensorflow as tf
 def run_net(data, params):
