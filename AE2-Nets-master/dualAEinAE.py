@@ -16,7 +16,11 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class dualModel:
-    def __init__(self,X1,X2,dims,batch_size,act,para_lambda,lr,epochs):
+    def __init__(self,epochs):
+        self.epochs=epochs
+    def train_model(self,X1,X2,dims,batch_size,act,para_lambda,lr,epochs):
+        err_total = list()
+        start = timeit.default_timer()
         self.dims=dims
         x1=X1
         self.latent_dim=100
@@ -88,10 +92,10 @@ class dualModel:
 
         z1_in=Input(shape=(latent_dim*2))
         z2_in=Input(shape=(latent_dim*2))
-        z1=self.discriminator(z1_in)
-        z2=self.discriminator(z2_in)
-        GlobalDiscriminator1=Model(z1_in,z1)
-        GlobalDiscriminator2=Model(z2_in,z2)
+        z1_discr=self.discriminator(z1_in)
+        z2_discr=self.discriminator(z2_in)
+        GlobalDiscriminator1=Model(z1_in,z1_discr)
+        GlobalDiscriminator2=Model(z2_in,z2_discr)
         z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
         z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
         z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)
@@ -137,7 +141,54 @@ class dualModel:
                 batch_g2=sess.run(g2,feed_dict={h_input:batch_h})
 
                 #ADM-step1 : optimize inner AEs 
+                _,val_dg=sess.run([update_ae,loss_ae],feed_dict={x1_input:batch_x1,x2_input:batch_x2,
+                                                                fea1_latent:batch_g1,fea2_latent:batch_g2})
 
+                batch_z_half1=sess.run(z1,feed_dict={x1_input:batch_x1})
+                batch_z_half2=sess.run(z2,feed_dict={x2_input:batch_x2})
+
+                sess.run(tf.assign(h_input,batch_h))
+
+                #ADM-step2: optimize dg nets
+                _,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
+                                                        fea2_latent:batch_z_half2})
+                
+                #ADM-step3:update H
+                for k in range(epochs[2]):
+                    sess.run(update_h,feed_dict={fea1_latent:batch_z_half1,fea2_latent:batch_z_half2})
+                batch_h_new=sess.run(h_input)
+                H[start_idx: end_idx, ...] = batch_h_new
+
+                sess.run(tf.assign(h_input, batch_h_new))
+                batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
+                batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
+
+                val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
+                                                        fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
+                                                        
+                err_total.append(val_total)
+                
+                output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
+                                                                                                    (num_batch_i + 1),
+                                                                                                    val_total)
+                print(output)
+        elapsed = (timeit.default_timer() - start)
+        print("Time used: ", elapsed)
+        '''
+        #?使用RBM  64->64
+        rbm=RBM_t1(64,64)
+        
+        H=tf.cast(H,tf.float32)
+        with tf.Session() as se:
+            H=H.eval()
+            H=H.tolist()
+        rbm.train(H)
+        H=rbm.rbm_outpt(H)
+        '''
+        scio.savemat('H.mat', mdict={'H': H, 'gt': gt, 'loss_total': err_total, 'time': elapsed,
+                                        'x1': X1, 'x2': X2})
+        return H, gt
+                
 
 
 
