@@ -7,7 +7,96 @@ from utils.next_batch import next_batch
 import math
 from sklearn.utils import shuffle
 import timeit
+from keras.layers import *
+from keras.models import Model
+class dualModel:
+    def __init__(self,X1,X2,dims):
+        self.dims=dims
+        x1=X1
+        self.latent_dim=100
+        '''
+        self.dims=dims
+        x1=X1
+        self.latent_dim=100
+        h=Dense(200,activation="sigmoid")(x1)
+        z_mean=Dense(self.latent_dim)(h)
+        z_log_var=Dense(self.latent_dim)(h)
+        self.encoder1=Model(x1,z_mean)
+        z=Input(shape=(self.latent_dim,))
+        h=z
+        h=Dense(200,activation="sigmoid")(h)
+        h=Dense(dims[0][0],activation="sigmoid")(h)
+        self.decoder1=Model(z,h)
+        x_recon1_noise=self.decoder1(z_mean)
+        '''
+        z_mean1,z_log_var1=self.encoder(X1)
+        z_mean2,z_log_var2=self.encoder(X2)
+        z1_input=Input(shape=(self.latent_dim,))
+        z2_input=Input(shape=(self.latent_dim,))
+        x_recon1=self.decoder(z1_input)
+        x_recon2=self.decoder(z2_input)
 
+        self.encoder1=Model(X1,z_mean1)
+        self.encoder2=Model(X2,z_mean2)
+        self.decoder1=Model(z1_input,x_recon1)
+        self.decoder2=Model(z2_input,x_recon2)
+        x_recon1_withnoise=self.decoder1(z_mean1)
+        x_recon2_withnoise=self.decoder2(z_mean2)
+        def sampling(args):
+            z_mean, z_log_var = args
+            epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dim))
+            return z_mean + K.exp(z_log_var / 2) * epsilon
+
+        z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
+        z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
+        x_recon1_true = self.decoder(z1)
+        x_recon2_true=self.decoder(z2)
+
+        def shuffling(x):
+            idxs = K.arange(0, K.shape(x)[0])
+            idxs = K.tf.random_shuffle(idxs)
+            return K.gather(x, idxs)
+
+        z1_shuffle = Lambda(shuffling)(z1)
+        z_z_1_true = Concatenate()([z1, z1])       # replicated feature vector
+        z_z_1_false = Concatenate()([z1, z1_shuffle])    # drawn from another image
+
+        z2_shuffle=Lambda(shuffling)(z2)
+        z_z_2_true=Concatenate()([z2,z2])
+        z_z_2_false=Concatenate()([z2,z2_shuffle])
+
+        z1_in=Input(shape=(latent_dim*2))
+        z2_in=Input(shape=(latent_dim*2))
+        z1=self.discriminator(z1_in)
+        z2=self.discriminator(z2_in)
+        GlobalDiscriminator1=Model(z1_in,z1)
+        GlobalDiscriminator2=Model(z2_in,z2)
+        z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
+        z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
+        z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)
+        z_z_2_false_scores=GlobalDiscriminator2(z_z_2_false)
+        global_info_loss=-K.mean(K.log(z_z_1_true_scores+1e-6)+K.log(1-z_z_1_false_scores+1e-6)) \
+                         -K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
+
+
+    def encoder(self,x1):
+        h=Dense(200,activation="sigmoid")(x1)
+        z_mean=Dense(self.latent_dim)(h)
+        z_log_var=Dense(self.latent_dim)(h)
+        return z_mean,z_log_var
+    def decoder(self,z):
+        h=z
+        h=Dense(200,activation="sigmoid")(h)
+        h=Dense(self.dims[0][0],activation="sigmoid")(h)
+        return h
+    def discriminator(self,z):
+        z1=Dense(self.latent_dim,activation='relu')(z)
+        z1=Dense(self.latent_dim,activation='relu')(z1)
+        z1=Dense(self.latent_dim,activation='relu')(z1)
+        z1=Dense(1,activation='sigmoid')(z1)
+        return z1
+
+    
 def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     """
     Building model
@@ -31,7 +120,7 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     net_ae2 = Net_ae(2, dims[1], para_lambda, act[1])
     net_dg1 = Net_dg(1, dims[2], act[2])
     net_dg2 = Net_dg(2, dims[3], act[3])
-
+    #z_mean=Dense(latent_dim)(h)
     H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
     x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
     x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
