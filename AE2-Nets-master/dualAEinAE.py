@@ -18,7 +18,7 @@ def xavier_init(fan_in, fan_out, constant=1):
 class dualModel:
     def __init__(self,epochs):
         self.epochs=epochs
-    def train_model(self,X1,X2,dims,batch_size,act,para_lambda,lr,epochs):
+    def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
         self.dims=dims
