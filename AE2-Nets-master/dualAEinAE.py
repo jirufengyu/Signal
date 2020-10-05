@@ -23,7 +23,7 @@ class dualModel:
         start = timeit.default_timer()
         self.dims=dims
         x1=X1
-        self.latent_dim=100
+        self.latent_dim=latent_dim=100
         H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
@@ -31,7 +31,10 @@ class dualModel:
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
         x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
+
         x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
+        x1_input0=Input([None, dims[0][0]],tensor=x1_input)
+        x2_input0=Input([None, dims[1][0]],tensor=x2_input)
         '''
         self.dims=dims
         x1=X1
@@ -47,8 +50,8 @@ class dualModel:
         self.decoder1=Model(z,h)
         x_recon1_noise=self.decoder1(z_mean)
         '''
-        z_mean1,z_log_var1=self.encoder(x1_input)
-        z_mean2,z_log_var2=self.encoder(x2_input)
+        z_mean1,z_log_var1=self.encoder(x1_input0)
+        z_mean2,z_log_var2=self.encoder(x2_input0)
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
 

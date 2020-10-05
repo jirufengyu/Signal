@@ -1,5 +1,5 @@
 from utils.Dataset import Dataset
-from RBM_AE import model
+from dualAEinAE import dualModel
 from utils.print_result import print_result
 import os
 
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     lr = [lr_pre, lr_ae, lr_dg, lr_h]
     epochs_h = 50
     epochs = [epochs_pre, epochs_total, epochs_h]
-
-    H, gt = model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
+    model=dualModel(10)
+    H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     
     print_result(n_clusters, H, gt)
