@@ -16,7 +16,7 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class dualModel:
-    def __init__(self,X1,X2,dims,batch_size):
+    def __init__(self,X1,X2,dims,batch_size,act,para_lambda,lr,epochs):
         self.dims=dims
         x1=X1
         self.latent_dim=100
@@ -24,6 +24,10 @@ class dualModel:
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
             h_list = tf.trainable_variables()
+        net_dg1 = Net_dg(1, dims[2], act[2])
+        net_dg2 = Net_dg(2, dims[3], act[3])
+        x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
+        x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
         '''
         self.dims=dims
         x1=X1
@@ -39,15 +43,16 @@ class dualModel:
         self.decoder1=Model(z,h)
         x_recon1_noise=self.decoder1(z_mean)
         '''
-        z_mean1,z_log_var1=self.encoder(X1)
-        z_mean2,z_log_var2=self.encoder(X2)
+        z_mean1,z_log_var1=self.encoder(x1_input)
+        z_mean2,z_log_var2=self.encoder(x2_input)
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
+
         x_recon1=self.decoder(z1_input)
         x_recon2=self.decoder(z2_input)
 
-        self.encoder1=Model(X1,z_mean1)
-        self.encoder2=Model(X2,z_mean2)
+        self.encoder1=Model(x1_input,z_mean1)
+        self.encoder2=Model(x2_input,z_mean2)
         self.decoder1=Model(z1_input,x_recon1)
         self.decoder2=Model(z2_input,x_recon2)
         x_recon1_withnoise=self.decoder1(z_mean1)       #带噪声的loss
@@ -62,6 +67,7 @@ class dualModel:
         x_recon1_true = self.decoder(z1)            #不带噪声的loss
         x_recon2_true=self.decoder(z2)
 
+        #! fea_latent
         fea1_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
         fea2_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
         loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
@@ -100,8 +106,39 @@ class dualModel:
         x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
         loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1)
         loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)
-        loss_ae=loss_vae1+loss_vae2
+        loss_ae=loss_vae1+loss_vae2+loss_degra1+loss_degra2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
+
+        loss_dg = para_lambda * (
+                net_dg1.loss_degradation(h_input, fea1_latent) 
+                + net_dg2.loss_degradation(h_input, fea2_latent))
+        update_dg = tf.train.AdamOptimizer(lr[2]).minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
+
+        update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
+        g1 = net_dg1.get_g(h_input)
+        g2 = net_dg2.get_g(h_input)
+
+        gpu_options = tf.GPUOptions(allow_growth=True)
+        sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+        sess.run(tf.global_variables_initializer())
+
+        num_samples = X1.shape[0]
+        num_batchs = math.ceil(num_samples / batch_size)
+        for j in range(epochs[1]):
+            X1,X2,H,gt=shuffle(X1,X2,H,gt)
+            for num_batch_i in range(int(num_batchs)-1):
+                start_idx, end_idx = num_batch_i * batch_size, (num_batch_i + 1) * batch_size
+                end_idx = min(num_samples, end_idx)
+                batch_x1 = X1[start_idx: end_idx, ...]
+                batch_x2 = X2[start_idx: end_idx, ...]
+                batch_h = H[start_idx: end_idx, ...]
+
+                batch_g1=sess.run(g1,feed_dict={h_input:batch_h})
+                batch_g2=sess.run(g2,feed_dict={h_input:batch_h})
+
+                #ADM-step1 : optimize inner AEs 
+
+
 
 
 
