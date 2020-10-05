@@ -9,11 +9,21 @@ from sklearn.utils import shuffle
 import timeit
 from keras.layers import *
 from keras.models import Model
+def xavier_init(fan_in, fan_out, constant=1):
+    low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
+    high = constant * np.sqrt(6.0 / (fan_in + fan_out))
+    return tf.random_uniform((fan_in, fan_out),
+                            minval=low, maxval=high,
+                            dtype=tf.float32)
 class dualModel:
-    def __init__(self,X1,X2,dims):
+    def __init__(self,X1,X2,dims,batch_size):
         self.dims=dims
         x1=X1
         self.latent_dim=100
+        H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
+        with tf.variable_scope("H"):
+            h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
+            h_list = tf.trainable_variables()
         '''
         self.dims=dims
         x1=X1
@@ -40,7 +50,7 @@ class dualModel:
         self.encoder2=Model(X2,z_mean2)
         self.decoder1=Model(z1_input,x_recon1)
         self.decoder2=Model(z2_input,x_recon2)
-        x_recon1_withnoise=self.decoder1(z_mean1)
+        x_recon1_withnoise=self.decoder1(z_mean1)       #带噪声的loss
         x_recon2_withnoise=self.decoder2(z_mean2)
         def sampling(args):
             z_mean, z_log_var = args
@@ -49,8 +59,13 @@ class dualModel:
 
         z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
         z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
-        x_recon1_true = self.decoder(z1)
+        x_recon1_true = self.decoder(z1)            #不带噪声的loss
         x_recon2_true=self.decoder(z2)
+
+        fea1_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
+        fea2_latent=tf.placeholder(np.float32, [None, dims[0][-1]])
+        loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
+        loss_degra2=0.5*tf.losses.mean_squared_error(z2, fea2_latent)
 
         def shuffling(x):
             idxs = K.arange(0, K.shape(x)[0])
@@ -75,8 +90,19 @@ class dualModel:
         z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
         z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)
         z_z_2_false_scores=GlobalDiscriminator2(z_z_2_false)
-        global_info_loss=-K.mean(K.log(z_z_1_true_scores+1e-6)+K.log(1-z_z_1_false_scores+1e-6)) \
-                         -K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
+        global_info_loss1=-K.mean(K.log(z_z_1_true_scores+1e-6)+K.log(1-z_z_1_false_scores+1e-6)) 
+        global_info_loss2=-K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
+
+        lamb=5
+        x1ent_loss=1*K.mean((X1-x_recon1_true)**2,0)
+        x2ent_loss=1*K.mean((X2-x_recon2_true)**2,0)
+        x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
+        x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
+        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1)
+        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)
+        loss_ae=loss_vae1+loss_vae2
+        update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
+
 
 
     def encoder(self,x1):
