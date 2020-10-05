@@ -16,7 +16,7 @@ def run_net(data, params):
     x_train_unlabeled, y_train_unlabeled, x_val, y_val, x_test, y_test = data['spectral']['train_and_test']
 
     inputs_vae = Input(shape=(params['img_dim'], params['img_dim'], 1), name='inputs_vae')
-    ConvAE = Conv.ConvAE(inputs_vae,params)
+    ConvAE = ConvRevised.ConvAE(inputs_vae,params)
     ConvAE.vae.load_weights('/home/stu2/Signal-1/Deep-Spectral-Clustering-using-Dual-Autoencoder-Network-master/src/applications/vae_mnist.h5')
 
     lh = LearningHandler(lr=params['spec_lr'], drop=params['spec_drop'], lr_tensor=ConvAE.learning_rate,
@@ -26,7 +26,7 @@ def run_net(data, params):
 
 
     losses_vae = np.empty((500,))
-    for i in range(20):
+    for i in range(100):
         # if i==0:
         x_val_y = ConvAE.vae.predict(x_val)[2]  #得到y
         losses_vae[i] = ConvAE.train_vae(x_val,x_val_y, params['batch_size'])

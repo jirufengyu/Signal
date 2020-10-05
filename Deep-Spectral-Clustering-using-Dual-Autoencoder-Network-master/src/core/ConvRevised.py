@@ -147,18 +147,21 @@ class ConvAE:
         # z_z_1_scores越高越好，z_z_2_scores越低越好
         global_info_loss = - K.mean(K.log(z_z_1_scores + 1e-6) + K.log(1 - z_z_2_scores + 1e-6))
 
+        #*去掉高斯先验
         #? gaussian是干嘛的
         gaussian = Gaussian(num_classes)
         z_prior_mean = gaussian(z)
+        print("!!!!!!!!!!!!!!!z_mean:",z_mean)
+        print("!!!!!!!!!!!!!!!z_prior_mean",z_prior_mean)
         #!  VAE
-        self.vae = Model(x, [x_recon1, z_prior_mean,y])
+        self.vae = Model(x, [x_recon1, y])#z_prior_mean,y])
 
         z_mean = K.expand_dims(z_mean, 1)
         z_log_var = K.expand_dims(z_log_var, 1)
         lamb = 5
         xent_loss = 1 * K.mean((x - x_recon) ** 2, 0)       #!L_r
         xent1_loss = 0.5 * K.mean((x_recon1 - x_recon) ** 2, 0)     #!L_r
-        kl_loss = - 0.5 * (1 + z_log_var - K.square(z_mean - z_prior_mean) - K.exp(z_log_var))
+        kl_loss = - 0.5 * (1 + z_log_var - K.square(z_mean-z_prior_mean) - K.exp(z_log_var))
         kl_loss = K.mean(K.batch_dot(K.expand_dims(y, 1),kl_loss), 0)
         cat_loss = K.mean(y * K.log(y + K.epsilon()), 0)
         loss_vae = lamb * K.sum(xent_loss) + lamb * K.sum(xent1_loss)+1.5*K.sum(kl_loss)+1*K.sum(cat_loss)+0.001*K.sum(global_info_loss)
