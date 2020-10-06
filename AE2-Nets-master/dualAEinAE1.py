@@ -8,7 +8,15 @@ import math
 from sklearn.utils import shuffle
 import timeit
 from keras.layers import *
+from utils.print_result import print_result
 from keras.models import Model
+from utils.Dataset import Dataset
+data = Dataset('handwritten_2views')
+x1, x2, gt = data.load_data()
+x1 = data.normalize(x1, 0)
+x2 = data.normalize(x2, 0)
+n_clusters = len(set(gt))
+
 def xavier_init(fan_in, fan_out, constant=1):
     low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
     high = constant * np.sqrt(6.0 / (fan_in + fan_out))
@@ -160,10 +168,12 @@ class dualModel:
                                                         
                 err_total.append(val_total)
                 
-                output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
-                                                                                                    (num_batch_i + 1),
-                                                                                                    val_total)
-                print(output)
+                #output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
+                 #                                                                                   (num_batch_i + 1),
+                  #                                                                                  val_total)
+                #print(output)
+            print("epoch:",j+1)
+            print_result(n_clusters, H, gt)
         elapsed = (timeit.default_timer() - start)
         print("Time used: ", elapsed)
         '''

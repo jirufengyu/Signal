@@ -32,7 +32,7 @@ if __name__ == '__main__':
     lr_dg = 1.0e-3
     lr_h = 1.0e-1
     epochs_pre = 10
-    epochs_total = 20
+    epochs_total = 30
     act = [act_ae1, act_ae2, act_dg1, act_dg2]
     dims = [dims_ae1, dims_ae2, dims_dg1, dims_dg2]
     lr = [lr_pre, lr_ae, lr_dg, lr_h]
