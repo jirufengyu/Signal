@@ -36,20 +36,21 @@ class dualModel:
         x1_input0=Input([None, dims[0][0]],tensor=x1_input)
         x2_input0=Input([None, dims[1][0]],tensor=x2_input)
     
-        z_mean1,z_log_var1=self.encoder(x1_input0)
-        z_mean2,z_log_var2=self.encoder(x2_input0)
+        self.encoder1=self.encoder(x1_input0)
+        self.encoder2=self.encoder(x2_input0)
+        z_mean1,z_log_var1=self.encoder1(x1_input0)
+        z_mean2,z_log_var2=self.encoder2(x2_input0)
+
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
 
-        x_recon1=self.decoder(z1_input,240)
-        x_recon2=self.decoder(z2_input,216)
-
-        self.encoder1=Model(x1_input,z_mean1)
-        self.encoder2=Model(x2_input,z_mean2)
-        print("!!!!!!!!!!!!!!encoder1",self.encoder1.trainable_weights)
-        print("!!!!!!!!!!!!!!encoder2",self.encoder2.trainable_weights)
-        self.decoder1=Model(z1_input,x_recon1)
-        self.decoder2=Model(z2_input,x_recon2)
+        self.decoder1=self.decoder(z1_input,240)
+        self.decoder2=self.decoder(z2_input,216)
+        #x_recon1  =self.decoder1(z1_input)
+        #x_recon2  =self.decoder2 (z2_input)
+        
+        #self.decoder1=Model(z1_input,x_recon1)
+        #self.decoder2=Model(z2_input,x_recon2)
         x_recon1_withnoise=self.decoder1(z_mean1)       #带噪声的loss
         x_recon2_withnoise=self.decoder2(z_mean2)
         def sampling(args):
@@ -83,10 +84,10 @@ class dualModel:
 
         z1_in=Input(shape=(latent_dim*2,))
         z2_in=Input(shape=(latent_dim*2,))
-        z1_discr=self.discriminator(z1_in)
-        z2_discr=self.discriminator(z2_in)
-        GlobalDiscriminator1=Model(z1_in,z1_discr)
-        GlobalDiscriminator2=Model(z2_in,z2_discr)
+        #z1_discr=self.discriminator(z1_in)
+        #z2_discr=self.discriminator(z2_in)
+        GlobalDiscriminator1=self.discriminator(z1_in)   #Model(z1_in,z1_discr)
+        GlobalDiscriminator2=self.discriminator(z2_in)   #Model(z2_in,z2_discr)
         z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
         z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
         z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)
@@ -94,13 +95,13 @@ class dualModel:
         global_info_loss1=-K.mean(K.log(z_z_1_true_scores+1e-6)+K.log(1-z_z_1_false_scores+1e-6)) 
         global_info_loss2=-K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
 
-        lamb=1 #5
+        lamb=5 #5
         x1ent_loss=1*K.mean((x1_input-x_recon1_true)**2,0)
         x2ent_loss=1*K.mean((x2_input-x_recon2_true)**2,0)
         x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
         x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
-        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+1*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+1*K.sum(global_info_loss2)  #0.001
+        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.01*K.sum(global_info_loss1) #0.001
+        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.01*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2+loss_degra1+loss_degra2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
 
@@ -188,18 +189,19 @@ class dualModel:
         h=Dense(200,activation="relu")(x1)
         z_mean=Dense(self.latent_dim)(h)
         z_log_var=Dense(self.latent_dim)(h)
-        return z_mean,z_log_var
+        return Model(x1,[z_mean,z_log_var])
+        
     def decoder(self,z,dim):
         h=z
         h=Dense(200,activation="relu")(h)
         h=Dense(dim,activation="relu")(h)  #输出的维度与解码器输入的维度相同
-        return h
+        return Model(z,h)
     def discriminator(self,z):
         z1=Dense(self.latent_dim,activation='relu')(z)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         z1=Dense(1,activation='sigmoid')(z1)
-        return z1
+        return Model(z,z1)
 
     
 def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):

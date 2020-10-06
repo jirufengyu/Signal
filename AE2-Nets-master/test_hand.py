@@ -1,5 +1,5 @@
 from utils.Dataset import Dataset
-from dualAEinAE import dualModel
+from dualAEinAE1 import dualModel
 from utils.print_result import print_result
 import os
 
