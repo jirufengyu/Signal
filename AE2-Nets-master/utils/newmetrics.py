@@ -83,7 +83,7 @@ def getMetrics(y_true, y_pred):
     pred = np.unique(y_pred)
     true_size = len(true)  # 真实值中有多少个类别
     pred_size = len(pred)  # 预测值中有多少个类别
-    print(true_size)
+    
     # 计算得到混淆矩阵
     a = np.ones((true_size, 1), dtype=int) * y_true  #
     b = true.reshape(true_size, 1) * np.ones((1, n), dtype=int)
@@ -111,5 +111,5 @@ def getMetrics(y_true, y_pred):
     F = np.nan_to_num(F)
     temp = (pj / float(pj.sum())) * np.max(F, axis=0)
     Fscore = np.sum(temp, axis=0)
-    Accuracy=print_accuracy(y_pred, y_true, 10, extra_identifier='')
+    Accuracy=print_accuracy(y_pred, y_true, true_size, extra_identifier='')
     return Fscore, Accuracy, NMI, ARI

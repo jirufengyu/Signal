@@ -100,8 +100,8 @@ class dualModel:
         x2ent_loss=1*K.mean((x2_input-x_recon2_true)**2,0)
         x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
         x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
-        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.01*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.01*K.sum(global_info_loss2)  #0.001
+        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) #0.001
+        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2+loss_degra1+loss_degra2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
 
