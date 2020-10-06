@@ -36,6 +36,7 @@ class dualModel:
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
             h_list = tf.trainable_variables()
+            
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
 
@@ -69,7 +70,7 @@ class dualModel:
         z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
         z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
         x_recon1_true = self.decoder1(z1)            #不带噪声的loss
-        x_recon2_true=self.decoder2(z2)
+        x_recon2_true = self.decoder2(z2)
 
         #! fea_latent
         fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
@@ -96,6 +97,7 @@ class dualModel:
         #z2_discr=self.discriminator(z2_in)
         GlobalDiscriminator1=self.discriminator(z1_in)   #Model(z1_in,z1_discr)
         GlobalDiscriminator2=self.discriminator(z2_in)   #Model(z2_in,z2_discr)
+
         z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
         z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
         z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)

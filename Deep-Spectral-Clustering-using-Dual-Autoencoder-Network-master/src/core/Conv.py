@@ -148,7 +148,7 @@ class ConvAE:
         # z_z_1_scores越高越好，z_z_2_scores越低越好
         global_info_loss = - K.mean(K.log(z_z_1_scores + 1e-6) + K.log(1 - z_z_2_scores + 1e-6))
 
-        #? gaussian是干嘛的
+        #? gaussian是干嘛的  看不懂这个gaussian
         gaussian = Gaussian(num_classes)
         z_prior_mean = gaussian(z)
         #!  VAE
