@@ -7,10 +7,16 @@ from utils.next_batch import next_batch
 import math
 from sklearn.utils import shuffle
 import timeit
+from keras.layers import *
+from keras import Model
 """
 中间加个对抗loss
 """
-
+def discriminator(x):
+    h=Dense(128,activation='relu')(x)
+    h=Dense(64,activation='relu')(h)
+    h=Dense(1,activation='sigmoid')(h)
+    return Model(x,h)
 def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
     """
     Building model
@@ -58,10 +64,31 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
                 + net_dg2.loss_degradation(h_input, fea2_latent))
     update_dg = tf.train.AdamOptimizer(lr[2]).minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
 
+    
+
+
     update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
     g1 = net_dg1.get_g(h_input)
     g2 = net_dg2.get_g(h_input)
+
+    z1_in=Input(shape=(200,))
+    z2_in=Input(shape=(200,))
     
+    z_half11 = tf.placeholder(np.float32, [None, 200])
+    z_half22 = tf.placeholder(np.float32, [None, 200])
+    g11 = tf.placeholder(np.float32, [None, 200])
+    g22 = tf.placeholder(np.float32, [None, 200])
+
+    GlobalDiscriminator1=discriminator(z1_in)
+    GlobalDiscriminator2=discriminator(z2_in)
+    z1_true_scores=GlobalDiscriminator1(z_half11)
+    z1_false_scores=GlobalDiscriminator1(g11)
+    z2_true_scores=GlobalDiscriminator2(z_half22)
+    z2_false_scores=GlobalDiscriminator2(g22)
+    global_info_loss1=-K.mean(K.log(z1_true_scores+1e-6)+K.log(1-z1_false_scores+1e-6)) 
+    global_info_loss2=-K.mean(K.log(z2_true_scores+1e-6)+K.log(1-z2_false_scores+1e-6))
+    loss_ad=0.01*K.sum(global_info_loss1)+0.001*K.sum(global_info_loss2)
+    update_ad=tf.train.AdamOptimizer(1.0e-3).minimize(loss_ad)
     gpu_options = tf.GPUOptions(allow_growth=True)
     sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
     sess.run(tf.global_variables_initializer())
@@ -113,7 +140,8 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             for k in range(epochs[2]):
                 sess.run(update_h, feed_dict={fea1_latent: batch_z_half1, fea2_latent: batch_z_half2})
 
-            batch_h_new = sess.run(h_input)
+            batch_h_new = sess.run(h_input)         #对抗loss在这里加
+            
             
             H[start_idx: end_idx, ...] = batch_h_new
 
@@ -121,6 +149,9 @@ def model(X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
             sess.run(tf.assign(h_input, batch_h_new))
             batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
             batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
+
+            sess.run(update_ad,feed_dict={z_half11:batch_z_half1,z_half22:batch_z_half2,
+                                            g11:batch_g1_new,   g22:batch_g2_new})
 
             val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
                                                     fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})

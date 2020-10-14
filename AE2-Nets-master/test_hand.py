@@ -1,5 +1,5 @@
 from utils.Dataset import Dataset
-from dualAEinAE1 import dualModel
+from dualAE_withAD import model
 from utils.print_result import print_result
 import os
 
@@ -22,8 +22,8 @@ if __name__ == '__main__':
     dims_dg1 = [64, 200]
     dims_dg2 = [64, 200]
     #现在用的
-    dims_dg1 = [64, 100]
-    dims_dg2 = [64, 100]
+    #dims_dg1 = [64, 100]
+    #dims_dg2 = [64, 100]
 
     para_lambda = 1
     batch_size = 100
@@ -32,13 +32,14 @@ if __name__ == '__main__':
     lr_dg = 1.0e-3
     lr_h = 1.0e-1
     epochs_pre = 10
-    epochs_total = 500
+    epochs_total = 20
     act = [act_ae1, act_ae2, act_dg1, act_dg2]
     dims = [dims_ae1, dims_ae2, dims_dg1, dims_dg2]
     lr = [lr_pre, lr_ae, lr_dg, lr_h]
     epochs_h = 50
     epochs = [epochs_pre, epochs_total, epochs_h]
-    model=dualModel(10)
-    H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
+
+    #model=dualModel(10)        #duaAE用的
+    H, gt = model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     
     print_result(n_clusters, H, gt)
