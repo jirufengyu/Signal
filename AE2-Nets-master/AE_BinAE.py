@@ -28,10 +28,11 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class BinAEModel:
-    def __init__(self,epochs,dims):
+    def __init__(self,epochs,dims,reg_lambda=0.05):
         self.epochs=epochs
         self.input1_shape=dims[0][0]
         self.input2_shape=dims[1][0]
+        self.reg_lambda = reg_lambda
     def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
@@ -217,29 +218,24 @@ class BinAEModel:
         z1=Dense(1,activation='sigmoid')(z1)
         return Model(z,z1)
     def bin_decoder(self, encoded):
+        h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h1 = Dense(150,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        decoded1 = Dense(self.input1_shape, activation='sigmoid')(h1)
 
-        dec_fc_txt = Dense(32, name='dec_fc_txt', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        repeated_context = RepeatVector(self.max_length)(dec_fc_txt)
-        dec_lstm_txt_1 = LSTM(32, return_sequences=True, activation='tanh', name='dec_lstm_txt_1', kernel_regularizer=regularizers.l2(self.reg_lambda))(repeated_context)
-        dec_lstm_txt_2 = LSTM(32, return_sequences=True, activation='tanh', name='dec_lstm_txt_2', kernel_regularizer=regularizers.l2(self.reg_lambda))(dec_lstm_txt_1)
-        decoded_txt = TimeDistributed(Dense(self.vocab_size, activation='softmax'), name='decoded_txt')(dec_lstm_txt_2)
-
-        dec_fc_img_1 = Dense(32, name='dec_fc_img_1', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        dec_fc_img_2 = Dense(1024, name='dec_fc_img_2', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(dec_fc_img_1)
-        decoded2 = Dense(4096, name='decoded_img', activation='sigmoid')(dec_fc_img_2)
+        h2 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h2 = Dense(150, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        decoded2 = Dense(self.input2_shape, activation='sigmoid')(h2)
 
         return decoded1, decoded2
-    def bin_encoder(self, input_txt, input_img, latent_dim=64):
+    def bin_encoder(self, input1, input2, latent_dim=64):
     
-        txt_embed = Embedding(self.vocab_size, 32, input_length=self.max_length, name='txt_embed', trainable=False, weights=[self.embedding_matrix])(input_txt)
-        lstm_txt_1 = Bidirectional(LSTM(32, return_sequences=True, name='lstm_txt_1', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda)), merge_mode='concat')(txt_embed)
-        lstm_txt_2 = Bidirectional(LSTM(32, return_sequences=False, name='lstm_txt_2', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda)), merge_mode='concat')(lstm_txt_1)
-        fc_txt = Dense(32, activation='tanh', name='dense_txt', kernel_regularizer=regularizers.l2(self.reg_lambda))(lstm_txt_2)
+        h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
+        h1 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
 
-        fc_img_1 = Dense(1024, name='fc_img_1', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input_img)
-        fc_img_2 = Dense(32, name='fc_img_2', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(fc_img_1)
+        h2 = Dense(100,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input2)
+        h2 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
 
-        h = Concatenate(axis=-1, name='concat')([fc_txt, fc_img_2])
+        h = Concatenate(axis=-1, name='concat')([h1, h2])
         h = Dense(64, name='shared', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h)
 
         def sampling(args):
