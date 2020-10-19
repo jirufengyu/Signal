@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 import scipy.io as scio
 from utils.Net_ae import Net_ae
-from utils.Net_dg import Net_dg
 from utils.next_batch import next_batch
 from keras import objectives, backend as K
 import math
@@ -14,7 +13,7 @@ from utils.print_result import print_result
 from utils.Dataset import Dataset
 from keras.optimizers import *
 """
-最初的ae_binAE未修改版
+#!可修改的ae_binae
 """
 data = Dataset('handwritten_2views')
 x1, x2, gt = data.load_data()
@@ -29,22 +28,31 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class BinAEModel:
-    def __init__(self,epochs,dims,reg_lambda=0.05):
+    def __init__(self,epochs,dims,reg_lambda=0.05,latent_dim=200,h_dim=64):
+        '''
+        latent_dim : latent feature dim in outer auto encoder
+        h_dim : representation in bimodal autocoder
+        
+        '''        
+        
         self.epochs=epochs
         self.input1_shape=dims[0][0]
         self.input2_shape=dims[1][0]
+        self.latent_dim=latent_dim
+        self.h_dim=h_dim
         self.reg_lambda = reg_lambda
     def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
         self.dims=dims
        
-        self.latent_dim=latent_dim=200
+        #self.latent_dim=latent_dim=200
         
-        H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
-        with tf.variable_scope("H"):
-            h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
-            h_list = tf.trainable_variables()
+        #H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
+        H = np.random.uniform(0, 1, [X1.shape[0], self.latent_dim])
+        #with tf.variable_scope("H"):
+            #h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
+            #h_list = tf.trainable_variables()
         """    
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
@@ -147,16 +155,7 @@ class BinAEModel:
         loss_vae2=lamb*K.sum(x2ent_loss)+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
-        """
-        loss_dg = para_lambda * (
-                net_dg1.loss_degradation(h_input, fea1_latent) 
-                + net_dg2.loss_degradation(h_input, fea2_latent))
-        update_dg = tf.train.AdamOptimizer(lr[2]).minimize(loss_dg, var_list=net_dg1.netpara.extend(net_dg2.netpara))
-
-        update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
-        g1 = net_dg1.get_g(h_input)
-        g2 = net_dg2.get_g(h_input)
-        """
+        
         gpu_options = tf.GPUOptions(allow_growth=True)
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         sess.run(tf.global_variables_initializer())
@@ -172,9 +171,7 @@ class BinAEModel:
                 batch_x2 = X2[start_idx: end_idx, ...]
                 batch_h = H[start_idx: end_idx, ...]
 
-                #batch_g1=sess.run(g1,feed_dict={h_input:batch_h})
-                #batch_g2=sess.run(g2,feed_dict={h_input:batch_h})
-
+            
                 #ADM-step1 : optimize inner AEs 
                 _,val_dg=sess.run([update_ae,loss_ae],feed_dict={x1_input:batch_x1,x2_input:batch_x2})
                                                                 #fea1_latent:batch_g1,fea2_latent:batch_g2})
@@ -182,7 +179,7 @@ class BinAEModel:
                 batch_z_half1=sess.run(z1,feed_dict={x1_input:batch_x1})
                 batch_z_half2=sess.run(z2,feed_dict={x2_input:batch_x2})
 
-                #sess.run(tf.assign(h_input,batch_h))
+                
 
                 #ADM-step2: optimize dg nets
                 #_,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
@@ -193,12 +190,10 @@ class BinAEModel:
                 #for k in range(epochs[2]):
                 #    sess.run(update_h,feed_dict={fea1_latent:batch_z_half1,fea2_latent:batch_z_half2})
                 h_get=sess.run(encoded,feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
-                #batch_h_new=sess.run(h_input)
+                
                 H[start_idx: end_idx, ...] = h_get
 
-                #sess.run(tf.assign(h_input, batch_h_new))
-                #batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
-                #batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
+                
 
                 #val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
                     #                                    fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
@@ -286,17 +281,6 @@ class BinAEModel:
         z_mean = Dense(latent_dim, name='z_mean', activation='linear')(h)
         z_log_var = Dense(latent_dim, name='z_log_var', activation='linear')(h)
         
-        def vae_mse_loss(x, x_decoded_mean):
-            mse_loss = objectives.mse(x, x_decoded_mean)
-            kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-            return mse_loss + kl_loss
-        
-        def vae_ce_loss(x, x_decoded_mean):
-            x = K.flatten(x)
-            x_decoded_mean = K.flatten(x_decoded_mean)
-            xent_loss = objectives.binary_crossentropy(x, x_decoded_mean)
-            kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-            return xent_loss + kl_loss
         kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         #return (vae_ce_loss, vae_mse_loss, Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var]))
         return kl_loss,Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var])
