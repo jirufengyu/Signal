@@ -12,6 +12,7 @@ from keras import Model
 import timeit
 from utils.print_result import print_result
 from utils.Dataset import Dataset
+from keras.optimizers import *
 """
 中间加个对抗loss
 """
@@ -38,7 +39,8 @@ class BinAEModel:
         start = timeit.default_timer()
         self.dims=dims
        
-        self.latent_dim=latent_dim=100
+        self.latent_dim=latent_dim=200
+        """
         H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
@@ -46,7 +48,7 @@ class BinAEModel:
             
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
-
+"""
         x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
         x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
         x1_input0=Input([None, dims[0][0]],tensor=x1_input)
@@ -54,8 +56,10 @@ class BinAEModel:
     
         self.encoder1=self.encoder(x1_input0)
         self.encoder2=self.encoder(x2_input0)
-        z_mean1,z_log_var1=self.encoder1(x1_input0)
-        z_mean2,z_log_var2=self.encoder2(x2_input0)
+        #z_mean1,z_log_var1=self.encoder1(x1_input0)
+        #z_mean2,z_log_var2=self.encoder2(x2_input0)
+        z1=self.encoder1(x1_input0)
+        z2=self.encoder2(x2_input0)
 
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
@@ -67,9 +71,28 @@ class BinAEModel:
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        x_recon1_withnoise=self.decoder1(z_mean1)       #带噪声的loss
-        x_recon2_withnoise=self.decoder2(z_mean2)
-        def sampling(args):
+        vae_ce_loss, vae_mse_loss, encoded = self.bin_encoder(z1_input,z2_input)
+        self.binencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
+
+        
+
+        encoded_input = Input(shape=(self.latent_dim,))
+        #predicted_outcome = self._build_fnd(encoded_input)
+        #self.fnd = Model(encoded_input, predicted_outcome)
+
+        decoded_1,decoded_2=self.bin_decoder(encoded_input)
+        self.bindecoder = Model(encoded_input, [decoded_1, decoded_2])
+
+        decoder_output = self._build_decoder(encoded)
+
+        #self.autoencoder = Model(inputs=[z1_input, z2_input], outputs=[decoder_output[0], decoder_output[1], self._build_fnd(encoded)])
+        #self.autoencoder.compile(optimizer=Adam(1e-5),
+         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'binary_crossentropy'],
+          #                       metrics=['accuracy'])
+        #self.get_features = K.function([z1_input, z2_input], [encoded])
+        x_recon1_withnoise=self.decoder1(z1)       #带噪声的loss
+        x_recon2_withnoise=self.decoder2(z2)
+        """def sampling(args):
             z_mean, z_log_var = args
             epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dim))
             return z_mean + K.exp(z_log_var / 2) * epsilon
@@ -77,13 +100,13 @@ class BinAEModel:
         z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
         z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
         x_recon1_true = self.decoder1(z1)            #不带噪声的loss
-        x_recon2_true = self.decoder2(z2)
+        x_recon2_true = self.decoder2(z2)"""
 
         #! fea_latent
-        fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
-        fea2_latent=tf.placeholder(np.float32, [None, latent_dim])
-        loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
-        loss_degra2=0.5*tf.losses.mean_squared_error(z2, fea2_latent)
+        #fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
+        #fea2_latent=tf.placeholder(np.float32, [None, latent_dim])
+        #loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
+        #loss_degra2=0.5*tf.losses.mean_squared_error(z2, fea2_latent)
 
         def shuffling(x):
             idxs = K.arange(0, K.shape(x)[0])
@@ -113,15 +136,14 @@ class BinAEModel:
         global_info_loss2=-K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
 
         lamb=5 #5
-        x1ent_loss=1*K.mean((x1_input-x_recon1_true)**2,0)
-        x2ent_loss=1*K.mean((x2_input-x_recon2_true)**2,0)
-        x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
-        x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
-        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)  #0.001
-        loss_ae=loss_vae1+loss_vae2+loss_degra1+loss_degra2
-        update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
 
+        x1ent1_loss=0.5*K.mean((x_recon1_withnoise)**2,0)
+        x2ent1_loss=0.5*K.mean((x_recon2_withnoise)**2,0)
+        loss_vae1=lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) #0.001
+        loss_vae2=lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)  #0.001
+        loss_ae=loss_vae1+loss_vae2
+        update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
+        """
         loss_dg = para_lambda * (
                 net_dg1.loss_degradation(h_input, fea1_latent) 
                 + net_dg2.loss_degradation(h_input, fea2_latent))
@@ -130,7 +152,7 @@ class BinAEModel:
         update_h = tf.train.AdamOptimizer(lr[3]).minimize(loss_dg, var_list=h_list)
         g1 = net_dg1.get_g(h_input)
         g2 = net_dg2.get_g(h_input)
-
+        """
         gpu_options = tf.GPUOptions(allow_growth=True)
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         sess.run(tf.global_variables_initializer())
@@ -202,10 +224,13 @@ class BinAEModel:
                 
     def encoder(self,x1):
         h=Dense(200,activation="relu")(x1)
+        #h=Dense(self.latent_dim)(h)
+        return Model(x1,h)
+        """
         z_mean=Dense(self.latent_dim)(h)
         z_log_var=Dense(self.latent_dim)(h)
         return Model(x1,[z_mean,z_log_var])
-        
+        """
     def decoder(self,z,dim):
         h=z
         h=Dense(200,activation="relu")(h)
@@ -220,13 +245,18 @@ class BinAEModel:
     def bin_decoder(self, encoded):
         h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
         h1 = Dense(150,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
-        decoded1 = Dense(self.input1_shape, activation='sigmoid')(h1)
+        decoded1 = Dense(200, activation='sigmoid')(h1)
 
         h2 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
         h2 = Dense(150, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        decoded2 = Dense(self.input2_shape, activation='sigmoid')(h2)
+        decoded2 = Dense(200, activation='sigmoid')(h2)
 
         return decoded1, decoded2
+    def _build_fnd(self, encoded):
+
+        h = Dense(64, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(encoded)
+        h = Dense(32, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(h)
+        return Dense(1, activation='sigmoid', name='fnd_output')(h)
     def bin_encoder(self, input1, input2, latent_dim=64):
     
         h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
