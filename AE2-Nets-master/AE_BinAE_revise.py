@@ -13,7 +13,7 @@ from utils.print_result import print_result
 from utils.Dataset import Dataset
 from keras.optimizers import *
 """
-#!可修改的ae_binae
+#!可修改的ae_bimae
 """
 data = Dataset('handwritten_2views')
 x1, x2, gt = data.load_data()
@@ -27,8 +27,8 @@ def xavier_init(fan_in, fan_out, constant=1):
     return tf.random_uniform((fan_in, fan_out),
                             minval=low, maxval=high,
                             dtype=tf.float32)
-class BinAEModel:
-    def __init__(self,epochs,dims,reg_lambda=0.05,latent_dim=200,h_dim=64):
+class BimAEModel:
+    def __init__(self,epochs,dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_bim=1e-3,lamb=5):
         '''
         latent_dim : latent feature dim in outer auto encoder
         h_dim : representation in bimodal autocoder
@@ -41,6 +41,9 @@ class BinAEModel:
         self.latent_dim=latent_dim
         self.h_dim=h_dim
         self.reg_lambda = reg_lambda
+        self.lr_ae=lr_ae
+        self.lr_bim=lr_bim
+        self.lamb=lamb
     def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
@@ -57,10 +60,10 @@ class BinAEModel:
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
 """
-        x1_input = tf.placeholder(np.float32, [None, dims[0][0]])
-        x2_input = tf.placeholder(np.float32, [None, dims[1][0]])
-        x1_input0=Input([None, dims[0][0]],tensor=x1_input)
-        x2_input0=Input([None, dims[1][0]],tensor=x2_input)
+        x1_input = tf.placeholder(np.float32, [None, self.input1_shape])
+        x2_input = tf.placeholder(np.float32, [None, self.input2_shape])
+        x1_input0=Input([None, self.input1_shape],tensor=x1_input)
+        x2_input0=Input([None, self.input2_shape],tensor=x2_input)
     
         self.encoder1=self.encoder(x1_input0)
         self.encoder2=self.encoder(x2_input0)
@@ -72,34 +75,34 @@ class BinAEModel:
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
 
-        self.decoder1=self.decoder(z1_input,240)
-        self.decoder2=self.decoder(z2_input,216)
+        self.decoder1=self.decoder(z1_input,self.input1_shape)
+        self.decoder2=self.decoder(z2_input,self.input2_shape)
         #x_recon1  =self.decoder1(z1_input)
         #x_recon2  =self.decoder2 (z2_input)
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        vae_mse_loss, encoded = self.bin_encoder(z1_input,z2_input)
+        vae_mse_loss, encoded = self.bim_encoder(z1_input,z2_input)
         #print('!!!!!!!!!!!!!!',vae_ce_loss)
-        self.binencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
+        self.bimencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
         
 
-        encoded_input = Input(shape=(64,))
+        encoded_input = Input(shape=(self.h_dim,))
         #predicted_outcome = self._build_fnd(encoded_input)
         #self.fnd = Model(encoded_input, predicted_outcome)
 
-        decoded_1,decoded_2=self.bin_decoder(encoded_input)
-        self.bindecoder = Model(encoded_input, [decoded_1, decoded_2])
+        decoded_1,decoded_2=self.bim_decoder(encoded_input)
+        self.bimdecoder = Model(encoded_input, [decoded_1, decoded_2])
      
-        decoder_output = self.bindecoder(encoded)
-        lamb=5
-        binloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
-        update_bin = tf.train.AdamOptimizer(1.0e-3).minimize(binloss)
+        decoder_output = self.bimdecoder(encoded)
+        lamb=self.lamb
+        bimloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
+        update_bim = tf.train.AdamOptimizer(self.lr_bim).minimize(bimloss)
 
         #self.autoencoder = Model(inputs=[z1_input, z2_input], outputs=[decoder_output[0], decoder_output[1], self._build_fnd(encoded)])
         #self.autoencoder.compile(optimizer=Adam(1e-5),
-         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'binary_crossentropy'],
+         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'bimary_crossentropy'],
           #                       metrics=['accuracy'])
         #self.get_features = K.function([z1_input, z2_input], [encoded])
         x_recon1_withnoise=self.decoder1(z1)       #带噪声的loss
@@ -154,7 +157,7 @@ class BinAEModel:
         loss_vae1=lamb*K.sum(x1ent_loss)+0.001*K.sum(global_info_loss1) #0.001
         loss_vae2=lamb*K.sum(x2ent_loss)+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2
-        update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
+        update_ae = tf.train.AdamOptimizer(self.lr_ae).minimize(loss_ae)
         
         gpu_options = tf.GPUOptions(allow_growth=True)
         sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
@@ -184,7 +187,7 @@ class BinAEModel:
                 #ADM-step2: optimize dg nets
                 #_,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
                     #                                    fea2_latent:batch_z_half2})
-                _,val_dg=sess.run([update_bin,binloss],feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
+                _,val_dg=sess.run([update_bim,bimloss],feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
                 #ADM-step3:update H
                 
                 #for k in range(epochs[2]):
@@ -243,15 +246,15 @@ class BinAEModel:
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         z1=Dense(1,activation='sigmoid')(z1)
         return Model(z,z1)
-    def bin_decoder(self, encoded):
+    def bim_decoder(self, encoded):
         
-        h1 = Dense(100, activation='tanh',name='bin_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h1 = Dense(150,  activation='tanh',name='bin_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
-        decoded1 = Dense(200, name='bin_decoder13',activation='sigmoid')(h1)
+        h1 = Dense(100, activation='tanh',name='bim_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h1 = Dense(150,  activation='tanh',name='bim_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        decoded1 = Dense(200, name='bim_decoder13',activation='sigmoid')(h1)
         
-        h2 = Dense(100, activation='tanh',name='bin_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h2 = Dense(150, activation='tanh',name='bin_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        decoded2 = Dense(200, name='bin_decoder23',activation='sigmoid')(h2)
+        h2 = Dense(100, activation='tanh',name='bim_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h2 = Dense(150, activation='tanh',name='bim_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        decoded2 = Dense(200, name='bim_decoder23',activation='sigmoid')(h2)
 
         return decoded1, decoded2
     def _build_fnd(self, encoded):
@@ -259,7 +262,7 @@ class BinAEModel:
         h = Dense(64, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(encoded)
         h = Dense(32, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(h)
         return Dense(1, activation='sigmoid', name='fnd_output')(h)
-    def bin_encoder(self, input1, input2, latent_dim=64):
+    def bim_encoder(self, input1, input2, latent_dim=64):
     
         h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
         h1 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
