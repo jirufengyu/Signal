@@ -40,12 +40,12 @@ class BinAEModel:
         self.dims=dims
        
         self.latent_dim=latent_dim=200
-        """
+        
         H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
             h_list = tf.trainable_variables()
-            
+        """    
         net_dg1 = Net_dg(1, dims[2], act[2])
         net_dg2 = Net_dg(2, dims[3], act[3])
 """
@@ -71,19 +71,23 @@ class BinAEModel:
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        vae_ce_loss, vae_mse_loss, encoded = self.bin_encoder(z1_input,z2_input)
+        vae_mse_loss, encoded = self.bin_encoder(z1_input,z2_input)
+        #print('!!!!!!!!!!!!!!',vae_ce_loss)
         self.binencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
         
 
-        encoded_input = Input(shape=(self.latent_dim,))
+        encoded_input = Input(shape=(64,))
         #predicted_outcome = self._build_fnd(encoded_input)
         #self.fnd = Model(encoded_input, predicted_outcome)
 
         decoded_1,decoded_2=self.bin_decoder(encoded_input)
         self.bindecoder = Model(encoded_input, [decoded_1, decoded_2])
-
-        decoder_output = self._build_decoder(encoded)
+     
+        decoder_output = self.bindecoder(encoded)
+        lamb=5
+        binloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
+        update_bin = tf.train.AdamOptimizer(1.0e-3).minimize(binloss)
 
         #self.autoencoder = Model(inputs=[z1_input, z2_input], outputs=[decoder_output[0], decoder_output[1], self._build_fnd(encoded)])
         #self.autoencoder.compile(optimizer=Adam(1e-5),
@@ -137,10 +141,10 @@ class BinAEModel:
 
         lamb=5 #5
 
-        x1ent1_loss=0.5*K.mean((x_recon1_withnoise)**2,0)
-        x2ent1_loss=0.5*K.mean((x_recon2_withnoise)**2,0)
-        loss_vae1=lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)  #0.001
+        x1ent_loss=1*K.mean((x1_input-x_recon1_withnoise)**2,0)
+        x2ent_loss=1*K.mean((x2_input-x_recon2_withnoise)**2,0)
+        loss_vae1=lamb*K.sum(x1ent_loss)+0.001*K.sum(global_info_loss1) #0.001
+        loss_vae2=lamb*K.sum(x2ent_loss)+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
         """
@@ -168,36 +172,38 @@ class BinAEModel:
                 batch_x2 = X2[start_idx: end_idx, ...]
                 batch_h = H[start_idx: end_idx, ...]
 
-                batch_g1=sess.run(g1,feed_dict={h_input:batch_h})
-                batch_g2=sess.run(g2,feed_dict={h_input:batch_h})
+                #batch_g1=sess.run(g1,feed_dict={h_input:batch_h})
+                #batch_g2=sess.run(g2,feed_dict={h_input:batch_h})
 
                 #ADM-step1 : optimize inner AEs 
-                _,val_dg=sess.run([update_ae,loss_ae],feed_dict={x1_input:batch_x1,x2_input:batch_x2,
-                                                                fea1_latent:batch_g1,fea2_latent:batch_g2})
+                _,val_dg=sess.run([update_ae,loss_ae],feed_dict={x1_input:batch_x1,x2_input:batch_x2})
+                                                                #fea1_latent:batch_g1,fea2_latent:batch_g2})
 
                 batch_z_half1=sess.run(z1,feed_dict={x1_input:batch_x1})
                 batch_z_half2=sess.run(z2,feed_dict={x2_input:batch_x2})
 
-                sess.run(tf.assign(h_input,batch_h))
+                #sess.run(tf.assign(h_input,batch_h))
 
                 #ADM-step2: optimize dg nets
-                _,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
-                                                        fea2_latent:batch_z_half2})
-                
+                #_,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
+                    #                                    fea2_latent:batch_z_half2})
+                _,val_dg=sess.run([update_bin,binloss],feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
                 #ADM-step3:update H
-                for k in range(epochs[2]):
-                    sess.run(update_h,feed_dict={fea1_latent:batch_z_half1,fea2_latent:batch_z_half2})
-                batch_h_new=sess.run(h_input)
-                H[start_idx: end_idx, ...] = batch_h_new
+                
+                #for k in range(epochs[2]):
+                #    sess.run(update_h,feed_dict={fea1_latent:batch_z_half1,fea2_latent:batch_z_half2})
+                h_get=sess.run(encoded,feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
+                #batch_h_new=sess.run(h_input)
+                H[start_idx: end_idx, ...] = h_get
 
-                sess.run(tf.assign(h_input, batch_h_new))
-                batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
-                batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
+                #sess.run(tf.assign(h_input, batch_h_new))
+                #batch_g1_new = sess.run(g1, feed_dict={h_input: batch_h})
+                #batch_g2_new = sess.run(g2, feed_dict={h_input: batch_h})
 
-                val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
-                                                        fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
+                #val_total = sess.run(loss_ae, feed_dict={x1_input: batch_x1, x2_input: batch_x2,
+                    #                                    fea1_latent: batch_g1_new, fea2_latent: batch_g2_new})
                                                         
-                err_total.append(val_total)
+                #err_total.append(val_total)
                 
                 #output = "Epoch : {:.0f} -- Batch : {:.0f} ===> Total training loss = {:.4f} ".format((j + 1),
                  #                                                                                   (num_batch_i + 1),
@@ -243,13 +249,14 @@ class BinAEModel:
         z1=Dense(1,activation='sigmoid')(z1)
         return Model(z,z1)
     def bin_decoder(self, encoded):
-        h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h1 = Dense(150,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
-        decoded1 = Dense(200, activation='sigmoid')(h1)
-
-        h2 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h2 = Dense(150, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        decoded2 = Dense(200, activation='sigmoid')(h2)
+        
+        h1 = Dense(100, activation='tanh',name='bin_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h1 = Dense(150,  activation='tanh',name='bin_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        decoded1 = Dense(200, name='bin_decoder13',activation='sigmoid')(h1)
+        
+        h2 = Dense(100, activation='tanh',name='bin_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        h2 = Dense(150, activation='tanh',name='bin_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        decoded2 = Dense(200, name='bin_decoder23',activation='sigmoid')(h2)
 
         return decoded1, decoded2
     def _build_fnd(self, encoded):
@@ -264,10 +271,12 @@ class BinAEModel:
 
         h2 = Dense(100,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input2)
         h2 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-
+        
+        
         h = Concatenate(axis=-1, name='concat')([h1, h2])
+        
         h = Dense(64, name='shared', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h)
-
+       
         def sampling(args):
             z_mean_, z_log_var_ = args
             batch_size = K.shape(z_mean_)[0]
@@ -276,7 +285,7 @@ class BinAEModel:
 
         z_mean = Dense(latent_dim, name='z_mean', activation='linear')(h)
         z_log_var = Dense(latent_dim, name='z_log_var', activation='linear')(h)
-
+        
         def vae_mse_loss(x, x_decoded_mean):
             mse_loss = objectives.mse(x, x_decoded_mean)
             kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
@@ -288,5 +297,6 @@ class BinAEModel:
             xent_loss = objectives.binary_crossentropy(x, x_decoded_mean)
             kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
             return xent_loss + kl_loss
-
-        return (vae_ce_loss, vae_mse_loss, Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var]))
+        kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+        #return (vae_ce_loss, vae_mse_loss, Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var]))
+        return kl_loss,Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var])
