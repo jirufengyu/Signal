@@ -226,8 +226,11 @@ class BimAEModel:
                                         'x1': X1, 'x2': X2})
         return H, gt
                 
-    def encoder(self,x1):
-        h=Dense(200,activation="relu")(x1)
+    def encoder(self,x1,dims): #dims=[input_shape,200]
+        h=x1
+        for i in range(len(dims)):
+            h=Dense(i+1,activation="relu")(h)
+        #h=Dense(200,activation="relu")(x1)
         #h=Dense(self.latent_dim)(h)
         return Model(x1,h)
         """
@@ -235,26 +238,37 @@ class BimAEModel:
         z_log_var=Dense(self.latent_dim)(h)
         return Model(x1,[z_mean,z_log_var])
         """
-    def decoder(self,z,dim):
+    def decoder(self,z,dims): #dims=[200,input_shape]
         h=z
-        h=Dense(200,activation="relu")(h)
-        h=Dense(dim,activation="relu")(h)  #输出的维度与解码器输入的维度相同
+        for i in range(len(dims)): 
+            h=Dense(i+1,activation="relu")(h)
+        #h=Dense(200,activation="relu")(h)
+        #h=Dense(dim,activation="relu")(h)  #输出的维度与解码器输入的维度相同
         return Model(z,h)
-    def discriminator(self,z):
-        z1=Dense(self.latent_dim,activation='relu')(z)
+    def discriminator(self,z,dims):   #判别器 dims=[latent_dims,1]
+        h=z
+        for i in range(len(dims)-1):
+            h=Dense(i,activation='relu')(h)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
-        z1=Dense(1,activation='sigmoid')(z1)
-        return Model(z,z1)
-    def bim_decoder(self, encoded):
+        h=Dense(1,activation='sigmoid')(h)
+        return Model(z,h)
+    def bim_decoder(self, encoded,dims1,dims2):   #dims1=[100,150,200],dims2=[100,150,200]
+        h1=h2=encoded
+        for i in range(len(dims1)-1):
+            h1=Dense(dims1[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        decoded1=Dense(dims1[-1],activation='sigmoid')(h1)
+        #h1 = Dense(100, activation='tanh',name='bim_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        #h1 = Dense(150,  activation='tanh',name='bim_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        #decoded1 = Dense(200, name='bim_decoder13',activation='sigmoid')(h1)
         
-        h1 = Dense(100, activation='tanh',name='bim_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h1 = Dense(150,  activation='tanh',name='bim_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
-        decoded1 = Dense(200, name='bim_decoder13',activation='sigmoid')(h1)
+        #h2 = Dense(100, activation='tanh',name='bim_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        #h2 = Dense(150, activation='tanh',name='bim_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        #decoded2 = Dense(200, name='bim_decoder23',activation='sigmoid')(h2)
         
-        h2 = Dense(100, activation='tanh',name='bim_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        h2 = Dense(150, activation='tanh',name='bim_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        decoded2 = Dense(200, name='bim_decoder23',activation='sigmoid')(h2)
+        for i in range(len(dims2)-1):
+            h2=Dense(dims2[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        decoded2=Dense(dims2[-1],activation='sigmoid')(h2)
 
         return decoded1, decoded2
     def _build_fnd(self, encoded):
