@@ -28,7 +28,7 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class MaeAEModel:
-    def __init__(self,epochs,v1_aedims,v2_aedims,mae_dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_mae=1e-3,lamb=5):
+    def __init__(self,epochs,v1_aedims,v2_aedims,mae_dims,dis_dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_mae=1e-3,lamb=5):
         '''
         latent_dim : latent feature dim in outer auto encoder
         h_dim : representation in maeodal autocoder
@@ -36,6 +36,7 @@ class MaeAEModel:
         v2_aedims: 第二个视角各层网络维度
         mae_dims: 多峰自编码器维度,一般的，多峰自编码器的维度不同的峰相同[[200,150,32],[200,150,32],[32,150,200],[32,150,200]]
                     前面两个是编码器维度，后面两个是解码器维度
+        discr_dims: 判别器维度 [200,150,1]
         h_dim可能与mae_dims的维度不同,一般是两个模态的编码器维度相加
         #!v1_aedims和v2_aedims都是[[],[]]的列表，如[[240,200],[200,240]]
         '''        
@@ -43,13 +44,15 @@ class MaeAEModel:
         self.epochs=epochs
         self.input1_shape=v1_aedims[0][0]
         self.input2_shape=v2_aedims[0][0]
+        
         self.v1_latent_dim=v1_aedims[0][-1] 
         self.v2_latent_dim=v2_aedims[0][-1]
+
         self.v1_dims=v1_aedims
         self.v2_dims=v2_aedims
-        self.h_dim=h_dim
+        self.h_dim=mae_dims[0][-1]+mae_dims[1][-1]
         self.mae_dims=mae_dims
-
+        self.dis_dims=dis_dims
         self.reg_lambda = reg_lambda
         self.lr_ae=lr_ae
         self.lr_mae=lr_mae
@@ -92,7 +95,7 @@ class MaeAEModel:
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0])
+        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0],dims2=self.mae_dims[1])
         #print('!!!!!!!!!!!!!!',vae_ce_loss)
         self.maeencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
@@ -102,7 +105,7 @@ class MaeAEModel:
         #predicted_outcome = self._build_fnd(encoded_input)
         #self.fnd = Model(encoded_input, predicted_outcome)
 
-        decoded_1,decoded_2=self.mae_decoder(encoded_input)
+        decoded_1,decoded_2=self.mae_decoder(encoded_input,dims1=self.mae_dims[2],dims2=self.mae_dims[3])
         self.maedecoder = Model(encoded_input, [decoded_1, decoded_2])
      
         decoder_output = self.maedecoder(encoded)
@@ -146,12 +149,12 @@ class MaeAEModel:
         z_z_2_true=Concatenate()([z2,z2])
         z_z_2_false=Concatenate()([z2,z2_shuffle])
 
-        z1_in=Input(shape=(latent_dim*2,))
-        z2_in=Input(shape=(latent_dim*2,))
+        z1_in=Input(shape=(self.v1_latent_dim*2,))
+        z2_in=Input(shape=(self.v2_latent_dim*2,))
         #z1_discr=self.discriminator(z1_in)
         #z2_discr=self.discriminator(z2_in)
-        GlobalDiscriminator1=self.discriminator(z1_in)   #Model(z1_in,z1_discr)
-        GlobalDiscriminator2=self.discriminator(z2_in)   #Model(z2_in,z2_discr)
+        GlobalDiscriminator1=self.discriminator(z1_in,dims=self.dis_dims)   #Model(z1_in,z1_discr)
+        GlobalDiscriminator2=self.discriminator(z2_in,dims=self.dis_dims)   #Model(z2_in,z2_discr)
 
         z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
         z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
@@ -238,8 +241,8 @@ class MaeAEModel:
                 
     def encoder(self,x1,dims): #dims=[input_shape,200]
         h=x1
-        for i in range(len(dims)):
-            h=Dense(i+1,activation="relu")(h)
+        for i in range(len(dims)-1):
+            h=Dense(dims[i+1],activation="relu")(h)
         #h=Dense(200,activation="relu")(x1)
         #h=Dense(self.latent_dim)(h)
         return Model(x1,h)
@@ -250,23 +253,23 @@ class MaeAEModel:
         """
     def decoder(self,z,dims): #dims=[200,input_shape]
         h=z
-        for i in range(len(dims)): 
-            h=Dense(i+1,activation="relu")(h)
+        for i in range(len(dims)-1): 
+            h=Dense(dims[i+1],activation="relu")(h)
         #h=Dense(200,activation="relu")(h)
         #h=Dense(dim,activation="relu")(h)  #输出的维度与解码器输入的维度相同
         return Model(z,h)
     def discriminator(self,z,dims):   #判别器 dims=[latent_dims,1]
         h=z
         for i in range(len(dims)-1):
-            h=Dense(i,activation='relu')(h)
+            h=Dense(dims[i],activation='relu')(h)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         h=Dense(1,activation='sigmoid')(h)
         return Model(z,h)
-    def mae_decoder(self, encoded,dims1,dims2):   #dims1=[100,150,200],dims2=[100,150,200]
+    def mae_decoder(self, encoded,dims1,dims2):   #dims1=[32,100,150,200],dims2=[32,100,150,200]
         h1=h2=encoded
         for i in range(len(dims1)-1):
-            h1=Dense(dims1[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+            h1=Dense(dims1[i+1],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
         decoded1=Dense(dims1[-1],activation='sigmoid')(h1)
         #h1 = Dense(100, activation='tanh',name='mae_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
         #h1 = Dense(150,  activation='tanh',name='mae_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
@@ -277,7 +280,7 @@ class MaeAEModel:
         #decoded2 = Dense(200, name='mae_decoder23',activation='sigmoid')(h2)
         
         for i in range(len(dims2)-1):
-            h2=Dense(dims2[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+            h2=Dense(dims2[i+1],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
         decoded2=Dense(dims2[-1],activation='sigmoid')(h2)
 
         return decoded1, decoded2
@@ -286,18 +289,18 @@ class MaeAEModel:
         h = Dense(64, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(encoded)
         h = Dense(32, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(h)
         return Dense(1, activation='sigmoid', name='fnd_output')(h)
-    def mae_encoder(self, input1, input2, dims1,dims2,h_dim=64):   #dims1=[100,32],dims2=[100,32],一般地，dims1[-1]+dims2[-1]=h_dim
+    def mae_encoder(self, input1, input2, dims1,dims2,h_dim=64):   #dims1=[200,100,32],dims2=[200,100,32],一般地，dims1[-1]+dims2[-1]=h_dim
         h1=input1
         h2=input2
-        for i in range(len(dims1)):
-            h1=Dense(dims1[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        for i in range(len(dims1)-1):
+            h1=Dense(dims1[i+1],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
         #h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
         #h1 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
 
         #h2 = Dense(100,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input2)
         #h2 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        for i in range(len(dims2)):
-            h2=Dense(dims2[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        for i in range(len(dims2)-1):
+            h2=Dense(dims2[i+1],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
              
         h = Concatenate(axis=-1, name='concat')([h1, h2])
         
