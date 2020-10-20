@@ -13,7 +13,7 @@ from utils.print_result import print_result
 from utils.Dataset import Dataset
 from keras.optimizers import *
 """
-#!可修改的ae_bimae
+#!可修改的ae_maeae
 """
 data = Dataset('handwritten_2views')
 x1, x2, gt = data.load_data()
@@ -27,12 +27,14 @@ def xavier_init(fan_in, fan_out, constant=1):
     return tf.random_uniform((fan_in, fan_out),
                             minval=low, maxval=high,
                             dtype=tf.float32)
-class BimAEModel:
-    def __init__(self,epochs,dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_bim=1e-3,lamb=5):
+class MaeAEModel:
+    def __init__(self,epochs,v1_aedims,v2_aedims,mae_dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_mae=1e-3,lamb=5):
         '''
         latent_dim : latent feature dim in outer auto encoder
-        h_dim : representation in bimodal autocoder
-        
+        h_dim : representation in maeodal autocoder
+        v1_aedims: 第一个视角各层网络维度
+        v2_aedims: 第二个视角各层网络维度
+        mae_dims: 多峰自编码器维度
         '''        
         
         self.epochs=epochs
@@ -42,7 +44,7 @@ class BimAEModel:
         self.h_dim=h_dim
         self.reg_lambda = reg_lambda
         self.lr_ae=lr_ae
-        self.lr_bim=lr_bim
+        self.lr_mae=lr_mae
         self.lamb=lamb
     def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
@@ -82,9 +84,9 @@ class BimAEModel:
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        vae_mse_loss, encoded = self.bim_encoder(z1_input,z2_input)
+        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input)
         #print('!!!!!!!!!!!!!!',vae_ce_loss)
-        self.bimencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
+        self.maeencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
         
 
@@ -92,17 +94,17 @@ class BimAEModel:
         #predicted_outcome = self._build_fnd(encoded_input)
         #self.fnd = Model(encoded_input, predicted_outcome)
 
-        decoded_1,decoded_2=self.bim_decoder(encoded_input)
-        self.bimdecoder = Model(encoded_input, [decoded_1, decoded_2])
+        decoded_1,decoded_2=self.mae_decoder(encoded_input)
+        self.maedecoder = Model(encoded_input, [decoded_1, decoded_2])
      
-        decoder_output = self.bimdecoder(encoded)
+        decoder_output = self.maedecoder(encoded)
         lamb=self.lamb
-        bimloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
-        update_bim = tf.train.AdamOptimizer(self.lr_bim).minimize(bimloss)
+        maeloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
+        update_mae = tf.train.AdamOptimizer(self.lr_mae).minimize(maeloss)
 
         #self.autoencoder = Model(inputs=[z1_input, z2_input], outputs=[decoder_output[0], decoder_output[1], self._build_fnd(encoded)])
         #self.autoencoder.compile(optimizer=Adam(1e-5),
-         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'bimary_crossentropy'],
+         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'maeary_crossentropy'],
           #                       metrics=['accuracy'])
         #self.get_features = K.function([z1_input, z2_input], [encoded])
         x_recon1_withnoise=self.decoder1(z1)       #带噪声的loss
@@ -187,7 +189,7 @@ class BimAEModel:
                 #ADM-step2: optimize dg nets
                 #_,val_dg=sess.run([update_dg,loss_dg],feed_dict={fea1_latent:batch_z_half1,
                     #                                    fea2_latent:batch_z_half2})
-                _,val_dg=sess.run([update_bim,bimloss],feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
+                _,val_dg=sess.run([update_mae,maeloss],feed_dict={z1_input:batch_z_half1,z2_input:batch_z_half2})
                 #ADM-step3:update H
                 
                 #for k in range(epochs[2]):
@@ -253,51 +255,55 @@ class BimAEModel:
         #z1=Dense(self.latent_dim,activation='relu')(z1)
         h=Dense(1,activation='sigmoid')(h)
         return Model(z,h)
-    def bim_decoder(self, encoded,dims1,dims2):   #dims1=[100,150,200],dims2=[100,150,200]
+    def mae_decoder(self, encoded,dims1,dims2):   #dims1=[100,150,200],dims2=[100,150,200]
         h1=h2=encoded
         for i in range(len(dims1)-1):
             h1=Dense(dims1[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
         decoded1=Dense(dims1[-1],activation='sigmoid')(h1)
-        #h1 = Dense(100, activation='tanh',name='bim_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        #h1 = Dense(150,  activation='tanh',name='bim_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
-        #decoded1 = Dense(200, name='bim_decoder13',activation='sigmoid')(h1)
+        #h1 = Dense(100, activation='tanh',name='mae_decoder11', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        #h1 = Dense(150,  activation='tanh',name='mae_decoder12', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        #decoded1 = Dense(200, name='mae_decoder13',activation='sigmoid')(h1)
         
-        #h2 = Dense(100, activation='tanh',name='bim_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
-        #h2 = Dense(150, activation='tanh',name='bim_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        #decoded2 = Dense(200, name='bim_decoder23',activation='sigmoid')(h2)
+        #h2 = Dense(100, activation='tanh',name='mae_decoder21', kernel_regularizer=regularizers.l2(self.reg_lambda))(encoded)
+        #h2 = Dense(150, activation='tanh',name='mae_decoder22', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        #decoded2 = Dense(200, name='mae_decoder23',activation='sigmoid')(h2)
         
         for i in range(len(dims2)-1):
             h2=Dense(dims2[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
         decoded2=Dense(dims2[-1],activation='sigmoid')(h2)
 
         return decoded1, decoded2
-    def _build_fnd(self, encoded):
+    def _build_fnd(self, encoded): #dims=[64,32,1]暂时不用这个函数
 
         h = Dense(64, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(encoded)
         h = Dense(32, activation='tanh', kernel_regularizer=regularizers.l2(self.fnd_lambda))(h)
         return Dense(1, activation='sigmoid', name='fnd_output')(h)
-    def bim_encoder(self, input1, input2, latent_dim=64):
-    
-        h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
-        h1 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+    def mae_encoder(self, input1, input2, dims1,dims2,h_dim=64):   #dims1=[100,32],dims2=[100,32],一般地，dims1[-1]+dims2[-1]=h_dim
+        h1=input1
+        h2=input2
+        for i in range(len(dims1)):
+            h1=Dense(dims1[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
+        #h1 = Dense(100, activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input1)
+        #h1 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h1)
 
-        h2 = Dense(100,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input2)
-        h2 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
-        
-        
+        #h2 = Dense(100,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(input2)
+        #h2 = Dense(32,  activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+        for i in range(len(dims2)):
+            h2=Dense(dims2[i],activation='tanh',kernel_regularizer=regularizers.l2(self.reg_lambda))(h2)
+             
         h = Concatenate(axis=-1, name='concat')([h1, h2])
         
-        h = Dense(64, name='shared', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h)
+        h = Dense(h_dim, name='shared', activation='tanh', kernel_regularizer=regularizers.l2(self.reg_lambda))(h)
        
         def sampling(args):
             z_mean_, z_log_var_ = args
             batch_size = K.shape(z_mean_)[0]
-            epsilon = K.random_normal(shape=(batch_size, latent_dim), mean=0., stddev=0.01)
+            epsilon = K.random_normal(shape=(batch_size, h_dim), mean=0., stddev=0.01)
             return z_mean_ + K.exp(0.5 * z_log_var_) * epsilon
 
-        z_mean = Dense(latent_dim, name='z_mean', activation='linear')(h)
-        z_log_var = Dense(latent_dim, name='z_log_var', activation='linear')(h)
+        z_mean = Dense(h_dim, name='z_mean', activation='linear')(h)
+        z_log_var = Dense(h_dim, name='z_log_var', activation='linear')(h)
         
         kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         #return (vae_ce_loss, vae_mse_loss, Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var]))
-        return kl_loss,Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var])
+        return kl_loss,Lambda(sampling, output_shape=(h_dim,), name='lambda')([z_mean, z_log_var])
