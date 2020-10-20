@@ -34,14 +34,22 @@ class MaeAEModel:
         h_dim : representation in maeodal autocoder
         v1_aedims: 第一个视角各层网络维度
         v2_aedims: 第二个视角各层网络维度
-        mae_dims: 多峰自编码器维度
+        mae_dims: 多峰自编码器维度,一般的，多峰自编码器的维度不同的峰相同[[200,150,32],[200,150,32],[32,150,200],[32,150,200]]
+                    前面两个是编码器维度，后面两个是解码器维度
+        h_dim可能与mae_dims的维度不同,一般是两个模态的编码器维度相加
+        #!v1_aedims和v2_aedims都是[[],[]]的列表，如[[240,200],[200,240]]
         '''        
         
         self.epochs=epochs
-        self.input1_shape=dims[0][0]
-        self.input2_shape=dims[1][0]
-        self.latent_dim=latent_dim
+        self.input1_shape=v1_aedims[0][0]
+        self.input2_shape=v2_aedims[0][0]
+        self.v1_latent_dim=v1_aedims[0][-1] 
+        self.v2_latent_dim=v2_aedims[0][-1]
+        self.v1_dims=v1_aedims
+        self.v2_dims=v2_aedims
         self.h_dim=h_dim
+        self.mae_dims=mae_dims
+
         self.reg_lambda = reg_lambda
         self.lr_ae=lr_ae
         self.lr_mae=lr_mae
@@ -49,12 +57,12 @@ class MaeAEModel:
     def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
-        self.dims=dims
+        #self.dims=dims
        
         #self.latent_dim=latent_dim=200
         
-        #H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
-        H = np.random.uniform(0, 1, [X1.shape[0], self.latent_dim])
+        
+        H = np.random.uniform(0, 1, [X1.shape[0], self.h_dim])
         #with tf.variable_scope("H"):
             #h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
             #h_list = tf.trainable_variables()
@@ -67,8 +75,8 @@ class MaeAEModel:
         x1_input0=Input([None, self.input1_shape],tensor=x1_input)
         x2_input0=Input([None, self.input2_shape],tensor=x2_input)
     
-        self.encoder1=self.encoder(x1_input0)
-        self.encoder2=self.encoder(x2_input0)
+        self.encoder1=self.encoder(x1_input0,dims=self.v1_dims[0])
+        self.encoder2=self.encoder(x2_input0,dims=self.v2_dims[0])
         #z_mean1,z_log_var1=self.encoder1(x1_input0)
         #z_mean2,z_log_var2=self.encoder2(x2_input0)
         z1=self.encoder1(x1_input0)
@@ -77,14 +85,14 @@ class MaeAEModel:
         z1_input=Input(shape=(self.latent_dim,))
         z2_input=Input(shape=(self.latent_dim,))
 
-        self.decoder1=self.decoder(z1_input,self.input1_shape)
-        self.decoder2=self.decoder(z2_input,self.input2_shape)
+        self.decoder1=self.decoder(z1_input,self.input1_shape,dims=self.v1_dims[1])
+        self.decoder2=self.decoder(z2_input,self.input2_shape,dims=self.v2_dims[1])
         #x_recon1  =self.decoder1(z1_input)
         #x_recon2  =self.decoder2 (z2_input)
         
         #self.decoder1=Model(z1_input,x_recon1)
         #self.decoder2=Model(z2_input,x_recon2)
-        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input)
+        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0])
         #print('!!!!!!!!!!!!!!',vae_ce_loss)
         self.maeencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
