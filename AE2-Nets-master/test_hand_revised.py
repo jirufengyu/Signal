@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2020-10-19 15:30:38
-LastEditTime: 2020-10-20 15:58:36
+LastEditTime: 2020-10-20 16:14:47
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
@@ -28,22 +28,21 @@ if __name__ == '__main__':
     n_clusters = len(set(gt))
 
     act_ae1, act_ae2, act_dg1, act_dg2 = 'sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'
-    v1_aedims = [[240, 200],[200,240]]
-    v2_aedims = [[216, 200],[216, 200]]
+    v1_aedims_ = [[240, 200],[200,240]]
+    
+    v2_aedims_ = [[216, 200],[200,216]]
     #原来的
-    mae_dims=[[200,150,32],[200,150,32],[32,150,200],[32,150,200]]
+    mae_dims_=[[200,150,32],[200,150,32],[32,150,200],[32,150,200]]
     #现在用的
     #dims_dg1 = [64, 100]
     #dims_dg2 = [64, 100]
-    dis_dims=[200,150,1]
+    dis_dims_=[200,150,1]
     para_lambda = 1
     batch_size = 100
     
     epochs = 200
-  
-    
 
-    model=MaeAEModel(epochs,v1_aedims,v2_aedims,mae_dims,dis_dims)        #duaAE用的
+    model=MaeAEModel(v1_aedims=v1_aedims_,v2_aedims=v2_aedims_,mae_dims=mae_dims_,dis_dims=dis_dims_)        #duaAE用的
     H, gt = model.train_model(x1, x2, gt, epochs, batch_size)
     #H,gt=model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     print_result(n_clusters, H, gt)

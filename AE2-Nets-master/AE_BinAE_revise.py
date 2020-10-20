@@ -40,7 +40,7 @@ class MaeAEModel:
         h_dim可能与mae_dims的维度不同,一般是两个模态的编码器维度相加
         #!v1_aedims和v2_aedims都是[[],[]]的列表，如[[240,200],[200,240]]
         '''        
-        
+        print("!!!!!!!",v1_aedims)
         self.input1_shape=v1_aedims[0][0]
         self.input2_shape=v2_aedims[0][0]
 
@@ -59,19 +59,11 @@ class MaeAEModel:
     def train_model(self,X1, X2, gt, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
-        #self.dims=dims
-       
-        #self.latent_dim=latent_dim=200
+        
         
         
         H = np.random.uniform(0, 1, [X1.shape[0], self.h_dim])
-        #with tf.variable_scope("H"):
-            #h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
-            #h_list = tf.trainable_variables()
-        """    
-        net_dg1 = Net_dg(1, dims[2], act[2])
-        net_dg2 = Net_dg(2, dims[3], act[3])
-"""
+
         x1_input = tf.placeholder(np.float32, [None, self.input1_shape])
         x2_input = tf.placeholder(np.float32, [None, self.input2_shape])
         x1_input0=Input([None, self.input1_shape],tensor=x1_input)
@@ -79,30 +71,21 @@ class MaeAEModel:
     
         self.encoder1=self.encoder(x1_input0,dims=self.v1_dims[0])
         self.encoder2=self.encoder(x2_input0,dims=self.v2_dims[0])
-        #z_mean1,z_log_var1=self.encoder1(x1_input0)
-        #z_mean2,z_log_var2=self.encoder2(x2_input0)
+
         z1=self.encoder1(x1_input0)
         z2=self.encoder2(x2_input0)
 
-        z1_input=Input(shape=(self.latent_dim,))
-        z2_input=Input(shape=(self.latent_dim,))
+        z1_input=Input(shape=(self.v1_latent_dim,))
+        z2_input=Input(shape=(self.v2_latent_dim,))
 
-        self.decoder1=self.decoder(z1_input,self.input1_shape,dims=self.v1_dims[1])
-        self.decoder2=self.decoder(z2_input,self.input2_shape,dims=self.v2_dims[1])
-        #x_recon1  =self.decoder1(z1_input)
-        #x_recon2  =self.decoder2 (z2_input)
-        
-        #self.decoder1=Model(z1_input,x_recon1)
-        #self.decoder2=Model(z2_input,x_recon2)
+        self.decoder1=self.decoder(z1_input,dims=self.v1_dims[1])
+        self.decoder2=self.decoder(z2_input,dims=self.v2_dims[1])
+
         vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0],dims2=self.mae_dims[1])
-        #print('!!!!!!!!!!!!!!',vae_ce_loss)
+
         self.maeencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
-        
-
         encoded_input = Input(shape=(self.h_dim,))
-        #predicted_outcome = self._build_fnd(encoded_input)
-        #self.fnd = Model(encoded_input, predicted_outcome)
 
         decoded_1,decoded_2=self.mae_decoder(encoded_input,dims1=self.mae_dims[2],dims2=self.mae_dims[3])
         self.maedecoder = Model(encoded_input, [decoded_1, decoded_2])
@@ -112,28 +95,8 @@ class MaeAEModel:
         maeloss=lamb*K.sum(1*K.mean((z1_input-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2_input-decoder_output[1])**2,0))+vae_mse_loss
         update_mae = tf.train.AdamOptimizer(self.lr_mae).minimize(maeloss)
 
-        #self.autoencoder = Model(inputs=[z1_input, z2_input], outputs=[decoder_output[0], decoder_output[1], self._build_fnd(encoded)])
-        #self.autoencoder.compile(optimizer=Adam(1e-5),
-         #                        loss=['sparse_categorical_crossentropy', vae_mse_loss, 'maeary_crossentropy'],
-          #                       metrics=['accuracy'])
-        #self.get_features = K.function([z1_input, z2_input], [encoded])
         x_recon1_withnoise=self.decoder1(z1)       #带噪声的loss
         x_recon2_withnoise=self.decoder2(z2)
-        """def sampling(args):
-            z_mean, z_log_var = args
-            epsilon = K.random_normal(shape=(K.shape(z_mean)[0], latent_dim))
-            return z_mean + K.exp(z_log_var / 2) * epsilon
-
-        z1 = Lambda(sampling, output_shape=(latent_dim,))([z_mean1, z_log_var1])
-        z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
-        x_recon1_true = self.decoder1(z1)            #不带噪声的loss
-        x_recon2_true = self.decoder2(z2)"""
-
-        #! fea_latent
-        #fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
-        #fea2_latent=tf.placeholder(np.float32, [None, latent_dim])
-        #loss_degra1=0.5*tf.losses.mean_squared_error(z1, fea1_latent)
-        #loss_degra2=0.5*tf.losses.mean_squared_error(z2, fea2_latent)
 
         def shuffling(x):
             idxs = K.arange(0, K.shape(x)[0])
