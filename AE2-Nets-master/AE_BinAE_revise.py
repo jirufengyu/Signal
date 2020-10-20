@@ -28,7 +28,7 @@ def xavier_init(fan_in, fan_out, constant=1):
                             minval=low, maxval=high,
                             dtype=tf.float32)
 class MaeAEModel:
-    def __init__(self,epochs,v1_aedims,v2_aedims,mae_dims,dis_dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_mae=1e-3,lamb=5):
+    def __init__(self,v1_aedims,v2_aedims,mae_dims,dis_dims,reg_lambda=0.05,latent_dim=200,h_dim=64,lr_ae=1e-3,lr_mae=1e-3,lamb=5):
         '''
         latent_dim : latent feature dim in outer auto encoder
         h_dim : representation in maeodal autocoder
@@ -41,10 +41,9 @@ class MaeAEModel:
         #!v1_aedims和v2_aedims都是[[],[]]的列表，如[[240,200],[200,240]]
         '''        
         
-        self.epochs=epochs
         self.input1_shape=v1_aedims[0][0]
         self.input2_shape=v2_aedims[0][0]
-        
+
         self.v1_latent_dim=v1_aedims[0][-1] 
         self.v2_latent_dim=v2_aedims[0][-1]
 
@@ -57,7 +56,7 @@ class MaeAEModel:
         self.lr_ae=lr_ae
         self.lr_mae=lr_mae
         self.lamb=lamb
-    def train_model(self,X1, X2, gt, para_lambda, dims, act, lr, epochs, batch_size):
+    def train_model(self,X1, X2, gt, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
         #self.dims=dims
@@ -178,7 +177,7 @@ class MaeAEModel:
 
         num_samples = X1.shape[0]
         num_batchs = math.ceil(num_samples / batch_size)
-        for j in range(epochs[1]):
+        for j in range(epochs):
             X1,X2,H,gt=shuffle(X1,X2,H,gt)
             for num_batch_i in range(int(num_batchs)-1):
                 start_idx, end_idx = num_batch_i * batch_size, (num_batch_i + 1) * batch_size

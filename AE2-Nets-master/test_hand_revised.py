@@ -1,5 +1,13 @@
+'''
+Author: your name
+Date: 2020-10-19 15:30:38
+LastEditTime: 2020-10-20 15:58:36
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
+'''
 from utils.Dataset import Dataset
-from AE_BinAE import BinAEModel
+from AE_BinAE_revise import MaeAEModel
 from model import model
 from utils.print_result import print_result
 import os
@@ -20,30 +28,22 @@ if __name__ == '__main__':
     n_clusters = len(set(gt))
 
     act_ae1, act_ae2, act_dg1, act_dg2 = 'sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'
-    dims_ae1 = [240, 200]
-    dims_ae2 = [216, 200]
+    v1_aedims = [[240, 200],[200,240]]
+    v2_aedims = [[216, 200],[216, 200]]
     #原来的
-    dims_dg1 = [64, 200]
-    dims_dg2 = [64, 200]
+    mae_dims=[[200,150,32],[200,150,32],[32,150,200],[32,150,200]]
     #现在用的
     #dims_dg1 = [64, 100]
     #dims_dg2 = [64, 100]
-
+    dis_dims=[200,150,1]
     para_lambda = 1
     batch_size = 100
-    lr_pre = 1.0e-3
-    lr_ae = 1.0e-3
-    lr_dg = 1.0e-3
-    lr_h = 1.0e-1
-    epochs_pre = 10
-    epochs_total = 200
-    act = [act_ae1, act_ae2, act_dg1, act_dg2]
-    dims = [dims_ae1, dims_ae2, dims_dg1, dims_dg2]
-    lr = [lr_pre, lr_ae, lr_dg, lr_h]
-    epochs_h = 50
-    epochs = [epochs_pre, epochs_total, epochs_h]
+    
+    epochs = 200
+  
+    
 
-    model=BinAEModel(10,dims)        #duaAE用的
-    H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
+    model=MaeAEModel(epochs,v1_aedims,v2_aedims,mae_dims,dis_dims)        #duaAE用的
+    H, gt = model.train_model(x1, x2, gt, epochs, batch_size)
     #H,gt=model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     print_result(n_clusters, H, gt)
