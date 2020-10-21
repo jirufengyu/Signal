@@ -15,11 +15,8 @@ from keras.optimizers import *
 """
 #!可修改的ae_maeae
 """
-data = Dataset('handwritten_2views')
-x1, x2, gt = data.load_data()
-x1 = data.normalize(x1, 0)
-x2 = data.normalize(x2, 0)
-n_clusters = len(set(gt))
+
+
 
 def xavier_init(fan_in, fan_out, constant=1):
     low = -constant * np.sqrt(6.0 / (fan_in + fan_out))
@@ -43,7 +40,7 @@ class MaeAEModel:
         print("!!!!!!!",v1_aedims)
         self.input1_shape=v1_aedims[0][0]
         self.input2_shape=v2_aedims[0][0]
-
+        
         self.v1_latent_dim=v1_aedims[0][-1] 
         self.v2_latent_dim=v2_aedims[0][-1]
 
@@ -59,7 +56,7 @@ class MaeAEModel:
     def train_model(self,X1, X2, gt, epochs, batch_size):
         err_total = list()
         start = timeit.default_timer()
-        
+        n_clusters = len(set(gt))
         
         
         H = np.random.uniform(0, 1, [X1.shape[0], self.h_dim])
@@ -81,7 +78,7 @@ class MaeAEModel:
         self.decoder1=self.decoder(z1_input,dims=self.v1_dims[1])
         self.decoder2=self.decoder(z2_input,dims=self.v2_dims[1])
 
-        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0],dims2=self.mae_dims[1])
+        vae_mse_loss, encoded = self.mae_encoder(z1_input,z2_input,dims1=self.mae_dims[0],dims2=self.mae_dims[1],h_dim=self.h_dim)
 
         self.maeencoder=Model(inputs=[z1_input,z2_input],outputs=encoded)
 
@@ -183,6 +180,7 @@ class MaeAEModel:
                   #                                                                                  val_total)
                 #print(output)
             print("epoch:",j+1)
+
             print_result(n_clusters, H, gt)
         elapsed = (timeit.default_timer() - start)
         print("Time used: ", elapsed)
