@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2020-10-19 15:30:38
-LastEditTime: 2020-10-21 01:44:01
+LastEditTime: 2020-10-21 02:03:47
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
@@ -21,7 +21,7 @@ each net has its own learning_rate(lr_xx), activation_function(act_xx), nodes_of
 ae net need pretraining before the whole optimization
 '''
 if __name__ == '__main__':
-    data = Dataset('coil_2views')
+    data = Dataset('ORL_2views')
     x1, x2, gt = data.load_data()
     x1 = data.normalize(x1, 0)
     x2 = data.normalize(x2, 0)
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     para_lambda = 1
     batch_size = 100
     
-    epochs = 100
+    epochs = 300
 
     model=MaeAEModel(v1_aedims=v1_aedims_,v2_aedims=v2_aedims_,mae_dims=mae_dims_,dis_dims=dis_dims_)        #duaAE用的
     H, gt = model.train_model(x1, x2, gt, epochs, batch_size)
