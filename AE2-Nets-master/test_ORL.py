@@ -1,7 +1,7 @@
 '''
 Author: your name
 Date: 2020-10-19 15:30:38
-LastEditTime: 2020-10-21 02:03:47
+LastEditTime: 2020-10-22 06:56:03
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     para_lambda = 1
     batch_size = 100
     
-    epochs = 300
+    epochs = 1000
 
     model=MaeAEModel(v1_aedims=v1_aedims_,v2_aedims=v2_aedims_,mae_dims=mae_dims_,dis_dims=dis_dims_)        #duaAE用的
     H, gt = model.train_model(x1, x2, gt, epochs, batch_size)
