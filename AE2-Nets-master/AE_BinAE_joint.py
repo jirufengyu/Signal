@@ -75,16 +75,10 @@ class MaeAEModel:
         self.decoder2=self.decoder(dims=self.v2_dims[1])
         x_recon1_withnoise=self.decoder1(z1)       #带噪声的loss
         x_recon2_withnoise=self.decoder2(z2)
-        #z1_input=Input(shape=(self.v1_latent_dim,))
-        #z2_input=Input(shape=(self.v2_latent_dim,))
 
-        
-
-        
-
-        vae_mse_loss,self.maeencoder=self.mae_encoder(dims1=self.mae_dims[0],dims2=self.mae_dims[1],h_dim=self.h_dim)
-        encoded=self.maeencoder([z1,z2])
-
+        self.maeencoder=self.mae_encoder(dims1=self.mae_dims[0],dims2=self.mae_dims[1],h_dim=self.h_dim)
+        encoded,z_mean,z_log_var=self.maeencoder([z1,z2])
+        vae_mse_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         encoded_input = Input(shape=(self.h_dim,))
 
         decoded_1,decoded_2=self.mae_decoder(encoded_input,dims1=self.mae_dims[2],dims2=self.mae_dims[3])
@@ -277,7 +271,7 @@ class MaeAEModel:
         z_mean = Dense(h_dim, name='z_mean', activation='linear')(h)
         z_log_var = Dense(h_dim, name='z_log_var', activation='linear')(h)
         
-        kl_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+        
         encoded=Lambda(sampling, output_shape=(h_dim,), name='lambda')([z_mean, z_log_var])
         #return (vae_ce_loss, vae_mse_loss, Lambda(sampling, output_shape=(latent_dim,), name='lambda')([z_mean, z_log_var]))
-        return kl_loss,Model(inputs=[input1,input2],outputs=[encoded])
+        return Model(inputs=[input1,input2],outputs=[encoded,z_mean,z_log_var])
