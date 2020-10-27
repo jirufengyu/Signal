@@ -31,7 +31,7 @@ class dualModel:
         start = timeit.default_timer()
         self.dims=dims
        
-        self.latent_dim=latent_dim=100
+        self.latent_dim=latent_dim=200
         H = np.random.uniform(0, 1, [X1.shape[0], dims[2][0]])
         with tf.variable_scope("H"):
             h_input = tf.Variable(xavier_init(batch_size, dims[2][0]), name='LatentSpaceData')
@@ -71,7 +71,8 @@ class dualModel:
         z2=Lambda(sampling,output_shape=(latent_dim,))([z_mean2,z_log_var2])
         x_recon1_true = self.decoder1(z1)            #不带噪声的loss
         x_recon2_true = self.decoder2(z2)
-
+        kl_loss1 = - 0.5 * K.mean(1 + z_log_var1 - K.square(z_mean1) - K.exp(z_log_var1), axis=-1)
+        kl_loss2 = - 0.5 * K.mean(1 + z_log_var2 - K.square(z_mean2) - K.exp(z_log_var2), axis=-1)
         #! fea_latent
         fea1_latent=tf.placeholder(np.float32, [None, latent_dim])
         fea2_latent=tf.placeholder(np.float32, [None, latent_dim])
@@ -110,8 +111,8 @@ class dualModel:
         x2ent_loss=1*K.mean((x2_input-x_recon2_true)**2,0)
         x1ent1_loss=0.5*K.mean((x_recon1_withnoise-x_recon1_true)**2,0)
         x2ent1_loss=0.5*K.mean((x_recon2_withnoise-x_recon2_true)**2,0)
-        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2)  #0.001
+        loss_vae1=lamb*K.sum(x1ent_loss)+lamb*K.sum(x1ent1_loss)+0.001*K.sum(global_info_loss1) +1.5*K.sum(kl_loss1)#0.001
+        loss_vae2=lamb*K.sum(x2ent_loss)+lamb*K.sum(x2ent1_loss)+0.001*K.sum(global_info_loss2) +1.5*K.sum(kl_loss2) #0.001
         loss_ae=loss_vae1+loss_vae2+loss_degra1+loss_degra2
         update_ae = tf.train.AdamOptimizer(1.0e-3).minimize(loss_ae)
 

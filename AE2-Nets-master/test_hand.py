@@ -1,5 +1,5 @@
 from utils.Dataset import Dataset
-from AE_BinAE import BinAEModel
+from dualAEinAE1 import dualModel
 from model import model
 from utils.print_result import print_result
 import os
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     epochs_h = 50
     epochs = [epochs_pre, epochs_total, epochs_h]
 
-    model=BinAEModel(10,dims)        #duaAE用的
+    model=dualModel(10)        #duaAE用的
     H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     #H,gt=model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     print_result(n_clusters, H, gt)

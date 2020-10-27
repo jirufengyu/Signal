@@ -1,3 +1,11 @@
+'''
+Author: your name
+Date: 2020-09-25 08:41:28
+LastEditTime: 2020-10-27 07:48:36
+LastEditors: Please set LastEditors
+Description: In User Settings Edit
+FilePath: /Signal-1/AE2-Nets-master/utils/Net_dg.py
+'''
 import tensorflow as tf
 from tensorflow.contrib import layers
 
@@ -60,6 +68,8 @@ class Net_dg(object):
     def loss_degradation(self, h, z_half):
         g = self.degradation(h, self.weights)
         # loss = 0.5 * tf.reduce_sum(tf.pow(tf.subtract(z_half, g), 2.0))
+        print("!!!!!!!!!!",z_half)
+        print("!!!!!!!!!!!",g)
         loss = tf.losses.mean_squared_error(z_half, g)
         return loss
 
