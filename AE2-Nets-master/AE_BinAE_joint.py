@@ -79,17 +79,15 @@ class MaeAEModel:
         self.maeencoder=self.mae_encoder(dims1=self.mae_dims[0],dims2=self.mae_dims[1],h_dim=self.h_dim)
         encoded,z_mean,z_log_var=self.maeencoder([z1,z2])
         vae_mse_loss = - 0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        encoded_input = Input(shape=(self.h_dim,))
 
+        encoded_input = Input(shape=(self.h_dim,))
         decoded_1,decoded_2=self.mae_decoder(encoded_input,dims1=self.mae_dims[2],dims2=self.mae_dims[3])
         self.maedecoder = Model(encoded_input, [decoded_1, decoded_2])
      
         decoder_output = self.maedecoder(encoded)
         lamb=self.lamb
         maeloss=lamb*K.sum(1*K.mean((z1-decoder_output[0])**2,0))+lamb*K.sum(1*K.mean((z2-decoder_output[1])**2,0))+vae_mse_loss
-        #update_mae = tf.train.AdamOptimizer(self.lr_mae).minimize(maeloss)
 
-        
 
         def shuffling(x):
             idxs = K.arange(0, K.shape(x)[0])
