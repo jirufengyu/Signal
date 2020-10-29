@@ -13,7 +13,7 @@ from utils.print_result import print_result
 from utils.Dataset import Dataset
 from keras.optimizers import *
 """
-#!可修改的ae_maeae
+#!适应版ae_mae,可以自定义维度
 """
 
 
