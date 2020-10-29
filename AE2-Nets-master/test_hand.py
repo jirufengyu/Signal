@@ -1,3 +1,11 @@
+'''
+Author: jirufengyu
+Date: 2020-09-25 08:41:28
+LastEditTime: 2020-10-29 13:14:00
+LastEditors: jirufengyu
+Description: Nothing
+FilePath: /Signal-1/AE2-Nets-master/test_hand.py
+'''
 from utils.Dataset import Dataset
 from dualAEinAE1 import dualModel
 from model import model
@@ -33,14 +41,14 @@ if __name__ == '__main__':
     lr_dg = 1.0e-3
     lr_h = 1.0e-1
     epochs_pre = 10
-    epochs_total = 200
+    epochs_total = 50
     act = [act_ae1, act_ae2, act_dg1, act_dg2]
     dims = [dims_ae1, dims_ae2, dims_dg1, dims_dg2]
     lr = [lr_pre, lr_ae, lr_dg, lr_h]
     epochs_h = 50
     epochs = [epochs_pre, epochs_total, epochs_h]
 
-    model=dualModel(10)        #duaAE用的
-    H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
-    #H,gt=model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
+    #model=dualModel(10)        #duaAE用的
+    #H, gt = model.train_model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
+    H,gt=model(x1, x2, gt, para_lambda, dims, act, lr, epochs, batch_size)
     print_result(n_clusters, H, gt)
