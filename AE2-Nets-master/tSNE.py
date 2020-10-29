@@ -1,7 +1,7 @@
 '''
 Author: jirufengyu
 Date: 2020-10-29 09:12:25
-LastEditTime: 2020-10-29 11:33:16
+LastEditTime: 2020-10-29 11:44:19
 LastEditors: jirufengyu
 Description: In User Settings Edit+
 FilePath: /Signal-1/AE2-Nets-master/tSNE.py
@@ -13,20 +13,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import numpy as np
-data_path="/home/stu2/Signal-1/AE2-Nets-master/H.mat"
-
-dataset = scipy.io.loadmat(data_path)
-H,gt=dataset['H'],dataset['gt']
-print(H.shape)
-print(gt)
-
-tsne = TSNE()
-tsne.fit_transform(H) #进行数据降维,并返回结果
-tsne = pd.DataFrame(tsne.embedding_, index = H.index) #转换数据格式
-
-
 # 对样本进行预处理并画图
-def plot_embedding(data, label, title):
+def plot_embedding(data, label, ):
     """
     :param data:数据集
     :param label:样本标签
@@ -41,9 +29,20 @@ def plot_embedding(data, label, title):
     for i in range(data.shape[0]):
         # 在图中为每个数据点画出标签
         plt.text(data[i, 0], data[i, 1], str(label[i]), color=plt.cm.Set1(label[i] / 10),
-                 fontdict={ weight :  bold ,  size : 10})
+                 fontdict={'weight' :  'bold' ,  'size' : 10})
     plt.xticks()        # 指定坐标的刻度
     plt.yticks()
-    plt.title(title, fontsize=14)
+    #plt.title(title, fontsize=14)
     # 返回值
     return fig
+if __name__ == '__main__':
+    data_path="/home/stu2/Signal-1/AE2-Nets-master/H.mat"
+
+    dataset = scipy.io.loadmat(data_path)
+    H,gt=dataset['H'],dataset['gt']
+    tsne = TSNE(n_components=2, init='pca', random_state=0)
+    
+    result = tsne.fit_transform(H)
+    fig = plot_embedding(result,gt)
+    plt.show(fig)
+
