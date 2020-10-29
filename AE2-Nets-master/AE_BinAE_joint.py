@@ -177,17 +177,7 @@ class MaeAEModel:
             print_result(n_clusters, H, gt)
         elapsed = (timeit.default_timer() - start)
         print("Time used: ", elapsed)
-        '''
-        #?使用RBM  64->64
-        rbm=RBM_t1(64,64)
-        
-        H=tf.cast(H,tf.float32)
-        with tf.Session() as se:
-            H=H.eval()
-            H=H.tolist()
-        rbm.train(H)
-        H=rbm.rbm_outpt(H)
-        '''
+        print(H)
         scio.savemat('H.mat', mdict={'H': H, 'gt': gt, 'loss_total': err_total, 'time': elapsed,
                                         'x1': X1, 'x2': X2})
         return H, gt

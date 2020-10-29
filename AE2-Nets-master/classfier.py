@@ -14,7 +14,7 @@ from keras.layers import *
 from sklearn.metrics import accuracy_score
 import numpy as np
 from keras.utils.np_utils import *
-data_path="/home/stu2/Signal-1/AE2-Nets-master/H.mat"
+data_path="/home/stu2/Signal-1/H.mat"
 
 dataset = scipy.io.loadmat(data_path)
 H,gt0=dataset['H'],dataset['gt']
