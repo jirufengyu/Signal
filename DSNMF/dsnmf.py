@@ -1,7 +1,7 @@
 '''
 Author: jirufengyu
 Date: 2020-11-02 05:55:22
-LastEditTime: 2020-11-02 07:28:25
+LastEditTime: 2020-11-02 08:00:59
 LastEditors: jirufengyu
 Description: Nothing
 FilePath: /Signal-1/DSNMF/dsnmf.py
@@ -90,7 +90,7 @@ class DSNMF(object):
         if have_dropout:
             h=tf.nn.dropout(h,0.5)
         for z in reversed(self.params[1:-1][:]):
-            h=tf.nn.relu(tf.multiply(z,h))
+            h=tf.nn.relu(tf.matmul(tf.cast(z,tf.float32),tf.cast(h,tf.float32)))
         if layer_num==-1:
-            h=tf.multiply(self.params[0],h)
+            h=tf.matmul(tf.cast(self.params[0],tf.float32),tf.cast(h,tf.float32))
         return h
