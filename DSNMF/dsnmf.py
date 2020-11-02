@@ -1,7 +1,7 @@
 '''
 Author: jirufengyu
 Date: 2020-11-02 05:55:22
-LastEditTime: 2020-11-02 08:00:59
+LastEditTime: 2020-11-02 08:26:36
 LastEditors: jirufengyu
 Description: Nothing
 FilePath: /Signal-1/DSNMF/dsnmf.py
@@ -50,7 +50,7 @@ def init_weights(X, num_components, svd_init=True):
     return Z, H
 
 class DSNMF(object):
-    def __init__(self, data, layers, verbose=False, l1_norms=[], pretrain=True, lr=1e-3):
+    def __init__(self, data, layers, verbose=False, l1_norms=[], pretrain=False, lr=1e-3):
         """
         Parameters
         ----------
@@ -64,20 +64,26 @@ class DSNMF(object):
         params=[]
         for i, l in enumerate(layers, start=1):
             print('Pretraining {}th layer [{}]'.format(i, l), end='\r')
-
             Z, H = init_weights(H, l, svd_init=pretrain)
             params.append(tf.Variable(Z,name='Z_%d'%(i)))
         params.append(tf.Variable(H,name='H_%d'%len(layers)))
         self.params=params
         self.layers=layers
+    def train(self, data, layers, verbose=False, l1_norms=[], pretrain=True, lr=1e-3):
+        
+        
+        H=data.T
         loss=tf.losses.mean_squared_error(data.T,self.get_h(-1))
-
-        for norm,param in zip(l1_norms,params):
+        
+        for norm,param in zip(l1_norms,self.params):
             loss+=((abs(param))*norm).sum()
+        loss=tf.Variable(loss)
         H=tf.nn.relu(self.params[-1])
-        updates=tf.train.AdamOptimizer(learning_rate=lr).minimize(loss,var_list=params)
-        self.loss=loss
+        updates=tf.train.AdamOptimizer(learning_rate=lr).minimize(loss,var_list=self.params)
+        #self.loss=loss
+        init=tf.global_variables_initializer()
         with tf.Session() as sess:
+            sess.run(init)
             for epoch in range(100):
                 loss=sess.run(loss)
                 sess.run(updates)

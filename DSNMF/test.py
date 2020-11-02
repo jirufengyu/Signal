@@ -1,7 +1,7 @@
 '''
 Author: jirufengyu
 Date: 2020-11-02 07:53:07
-LastEditTime: 2020-11-02 07:55:06
+LastEditTime: 2020-11-02 08:21:28
 LastEditors: jirufengyu
 Description: Nothing
 FilePath: /Signal-1/DSNMF/test.py
@@ -24,6 +24,7 @@ data /= np.linalg.norm(data, 2, 1)[:, None]
 n_classes = np.unique(gnd).shape[0]
 kmeans = KMeans(n_classes, precompute_distances=False)
 dsnmf = DSNMF(data, layers=(400, 100))
+dsnmf.train(data, layers=(400, 100))
 fea=dsnmf.H
 pred = kmeans.fit_predict(fea)
 score = sklearn.metrics.normalized_mutual_info_score(gnd, pred)
