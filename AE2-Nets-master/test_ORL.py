@@ -1,10 +1,10 @@
 '''
 Author: your name
 Date: 2020-10-19 15:30:38
-LastEditTime: 2020-10-22 06:56:03
-LastEditors: Please set LastEditors
+LastEditTime: 2020-11-05 03:26:53
+LastEditors: jirufengyu
 Description: In User Settings Edit
-FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
+FilePath: /Signal-1/AE2-Nets-master/test_ORL.py
 '''
 from utils.Dataset import Dataset
 from AE_BinAE_revise import MaeAEModel
@@ -38,9 +38,9 @@ if __name__ == '__main__':
     #dims_dg2 = [64, 100]
     dis_dims_=[256,128,1]
     para_lambda = 1
-    batch_size = 100
+    batch_size = 256
     
-    epochs = 1000
+    epochs = 500
 
     model=MaeAEModel(v1_aedims=v1_aedims_,v2_aedims=v2_aedims_,mae_dims=mae_dims_,dis_dims=dis_dims_)        #duaAE用的
     H, gt = model.train_model(x1, x2, gt, epochs, batch_size)

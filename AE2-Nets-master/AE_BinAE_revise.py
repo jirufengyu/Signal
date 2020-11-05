@@ -126,8 +126,8 @@ class MaeAEModel:
         x1ent_loss=1*K.mean((x1_input-x_recon1_withnoise)**2,0)
         x2ent_loss=1*K.mean((x2_input-x_recon2_withnoise)**2,0)
 
-        loss_vae1=lamb*K.sum(x1ent_loss)+0.001*K.sum(global_info_loss1) #0.001
-        loss_vae2=lamb*K.sum(x2ent_loss)+0.001*K.sum(global_info_loss2)  #0.001
+        loss_vae1=lamb*K.sum(x1ent_loss)#+0.001*K.sum(global_info_loss1) #0.001
+        loss_vae2=lamb*K.sum(x2ent_loss)#+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2
         update_ae = tf.train.AdamOptimizer(self.lr_ae).minimize(loss_ae)
         
