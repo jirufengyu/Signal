@@ -1,13 +1,13 @@
 '''
 Author: your name
 Date: 2020-10-19 15:30:38
-LastEditTime: 2020-10-29 13:04:53
+LastEditTime: 2020-11-02 15:11:48
 LastEditors: jirufengyu
 Description: In User Settings Edit
 FilePath: /Signal-1/AE2-Nets-master/test_hand_revised.py
 '''
 from utils.Dataset import Dataset
-from AE_BinAE_joint import MaeAEModel
+from AE_BinAE_revise import MaeAEModel
 from model import model
 from utils.print_result import print_result
 import os

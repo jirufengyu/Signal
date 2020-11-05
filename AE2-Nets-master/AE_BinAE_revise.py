@@ -123,9 +123,9 @@ class MaeAEModel:
         global_info_loss2=-K.mean(K.log(z_z_2_true_scores+1e-6)+K.log(1-z_z_2_false_scores+1e-6))
 
         lamb=5 #5
-
         x1ent_loss=1*K.mean((x1_input-x_recon1_withnoise)**2,0)
         x2ent_loss=1*K.mean((x2_input-x_recon2_withnoise)**2,0)
+
         loss_vae1=lamb*K.sum(x1ent_loss)+0.001*K.sum(global_info_loss1) #0.001
         loss_vae2=lamb*K.sum(x2ent_loss)+0.001*K.sum(global_info_loss2)  #0.001
         loss_ae=loss_vae1+loss_vae2
@@ -144,13 +144,10 @@ class MaeAEModel:
                 end_idx = min(num_samples, end_idx)
                 batch_x1 = X1[start_idx: end_idx, ...]
                 batch_x2 = X2[start_idx: end_idx, ...]
-                batch_h = H[start_idx: end_idx, ...]
-
-            
+                batch_h = H[start_idx: end_idx, ...]               
                 #ADM-step1 : optimize inner AEs 
                 _,val_dg=sess.run([update_ae,loss_ae],feed_dict={x1_input:batch_x1,x2_input:batch_x2})
                                                                 #fea1_latent:batch_g1,fea2_latent:batch_g2})
-
                 batch_z_half1=sess.run(z1,feed_dict={x1_input:batch_x1})
                 batch_z_half2=sess.run(z2,feed_dict={x2_input:batch_x2})
 
