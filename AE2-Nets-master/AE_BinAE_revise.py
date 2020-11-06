@@ -37,7 +37,6 @@ class MaeAEModel:
         h_dim可能与mae_dims的维度不同,一般是两个模态的编码器维度相加
         #!v1_aedims和v2_aedims都是[[],[]]的列表，如[[240,200],[200,240]]
         '''        
-        print("!!!!!!!",v1_aedims)
         self.input1_shape=v1_aedims[0][0]
         self.input2_shape=v2_aedims[0][0]
         
@@ -116,7 +115,7 @@ class MaeAEModel:
         GlobalDiscriminator2=self.discriminator(z2_in,dims=self.dis_dims)   #Model(z2_in,z2_discr)
 
         z_z_1_true_scores=GlobalDiscriminator1(z_z_1_true)
-        z_z_1_false_scores=GlobalDiscriminator1(z_z_2_false)
+        z_z_1_false_scores=GlobalDiscriminator1(z_z_1_false)
         z_z_2_true_scores=GlobalDiscriminator2(z_z_2_true)
         z_z_2_false_scores=GlobalDiscriminator2(z_z_2_false)
         global_info_loss1=-K.mean(K.log(z_z_1_true_scores+1e-6)+K.log(1-z_z_1_false_scores+1e-6)) 
