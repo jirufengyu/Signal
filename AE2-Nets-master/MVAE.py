@@ -189,7 +189,7 @@ class MaeAEModel:
         rbm.train(H)
         H=rbm.rbm_outpt(H)
         '''
-        scio.savemat('H.mat', mdict={'H': H, 'gt': gt, 'loss_total': err_total, 'time': elapsed,
+        scio.savemat('MVAEH.mat', mdict={'H': H, 'gt': gt, 'loss_total': err_total, 'time': elapsed,
                                         'x1': X1, 'x2': X2})
         return H, gt
                 

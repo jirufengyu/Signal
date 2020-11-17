@@ -1,7 +1,7 @@
 '''
 Author: jirufengyu
 Date: 2020-11-05 15:18:33
-LastEditTime: 2020-11-06 03:14:36
+LastEditTime: 2020-11-06 04:00:05
 LastEditors: jirufengyu
 Description: Nothing
 FilePath: /Signal-1/AE2-Nets-master/test_Caltech.py
@@ -30,15 +30,15 @@ if __name__ == '__main__':
     #act_ae1, act_ae2, act_dg1, act_dg2 = 'sigmoid', 'sigmoid', 'sigmoid', 'sigmoid'
     v1_aedims_ = [[x1.shape[1], 1024,512,256],[256,512,1024,x1.shape[1]]]
     
-    v2_aedims_ = [[x2.shape[1],  256,256,128],[128,256,256,x2.shape[1]]]
+    v2_aedims_ = [[x2.shape[1],256,128],[128,256,x2.shape[1]]]
     #原来的
-    mae_dims_=[[256,256,128,64],[128,128,64,32],[64,128,256,256],[32,64,128,128]]
+    mae_dims_=[[256,256],[128,128,64],[256,256],[64,128,128]]
     #现在用的
     #dims_dg1 = [64, 100]
     #dims_dg2 = [64, 100]
     dis_dims_=[256,128,1]
     para_lambda = 1
-    batch_size = 256
+    batch_size = 100
     
     epochs = 500
 
